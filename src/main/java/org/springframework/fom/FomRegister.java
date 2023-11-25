@@ -13,13 +13,13 @@ import org.springframework.context.ApplicationContextAware;
 import org.springframework.fom.annotation.Fom;
 
 /**
- * 
+ *
  * @author shanhm1991@163.com
  *
  */
-public class FomExternalRegister implements BeanFactoryAware, ApplicationContextAware {
+public class FomRegister implements BeanFactoryAware, ApplicationContextAware {
 
-	private static final Logger logger = LoggerFactory.getLogger(FomExternalRegister.class);
+	private static final Logger logger = LoggerFactory.getLogger(FomRegister.class);
 
 	private static DefaultListableBeanFactory defaultListableBeanFactory;
 
@@ -27,7 +27,7 @@ public class FomExternalRegister implements BeanFactoryAware, ApplicationContext
 
 	@Override
 	public void setBeanFactory(BeanFactory beanFactory) throws BeansException {
-		defaultListableBeanFactory = (DefaultListableBeanFactory)beanFactory; 
+		defaultListableBeanFactory = (DefaultListableBeanFactory)beanFactory;
 	}
 
 	@Override
@@ -37,11 +37,11 @@ public class FomExternalRegister implements BeanFactoryAware, ApplicationContext
 
 	/**
 	 * 注入外部定时器
-	 * @param scheduleName  定时器beanName
+	 * @param scheduleName   定时器beanName
 	 * @param scheduleClass  被代理Class
 	 * @param scheduleConfig 定时配置
 	 */
-	public static void regist(String scheduleName, Class<?> scheduleClass, ScheduleConfig scheduleConfig) {
+	public static <T> ScheduleContext<T> register(String scheduleName, Class<?> scheduleClass, ScheduleConfig scheduleConfig) {
 		Fom fom = scheduleClass.getAnnotation(Fom.class);
 		if(fom == null) {
 			throw new FomException(scheduleClass + " is not a fom");
@@ -50,24 +50,31 @@ public class FomExternalRegister implements BeanFactoryAware, ApplicationContext
 		String[] names = applicationContext.getBeanNamesForType(scheduleClass);
 		String scheduleBeanName = names[0];
 
-		BeanDefinitionBuilder builder = BeanDefinitionBuilder.genericBeanDefinition(ScheduleContext.class); 
+		BeanDefinitionBuilder builder = BeanDefinitionBuilder.genericBeanDefinition(ScheduleContext.class);
 		GenericBeanDefinition beanDefinition = (GenericBeanDefinition)builder.getBeanDefinition();
-		beanDefinition.setAutowireMode(GenericBeanDefinition.AUTOWIRE_BY_TYPE); 
+		beanDefinition.setAutowireMode(GenericBeanDefinition.AUTOWIRE_BY_TYPE);
 		beanDefinition.getPropertyValues().add("scheduleClass", scheduleClass);
 		beanDefinition.getPropertyValues().add("scheduleConfig", scheduleConfig);
 		beanDefinition.getPropertyValues().add("scheduleName", scheduleName);
 		beanDefinition.getPropertyValues().add("scheduleBeanName", scheduleBeanName);
 		beanDefinition.setBeanClass(FomFactory.class);
 
-		defaultListableBeanFactory.registerBeanDefinition(scheduleName, beanDefinition); 
-		ScheduleContext<?> schedule = defaultListableBeanFactory.getBean(scheduleName, ScheduleContext.class); // 实例化一下
-		
-		ScheduleConfig config = schedule.getScheduleConfig();
-		if(config.getBoolean(ScheduleConfig.KEY_enable, true)){
-			schedule.scheduleStart();
-			logger.info("register and start schedule[{}]: {}", scheduleName, config.getConfMap()); 
-		}else{
-			logger.info("register schedule[{}]: {}", scheduleName, config.getConfMap()); 
+		if (defaultListableBeanFactory.containsBeanDefinition(scheduleName)) {
+			defaultListableBeanFactory.removeBeanDefinition(scheduleName);
+			if (defaultListableBeanFactory.containsSingleton(scheduleName)) {
+				defaultListableBeanFactory.destroySingleton(scheduleName);
+			}
 		}
+		defaultListableBeanFactory.registerBeanDefinition(scheduleName, beanDefinition);
+		ScheduleContext<T> schedule = defaultListableBeanFactory.getBean(scheduleName, ScheduleContext.class);
+
+		ScheduleConfig config = schedule.getScheduleConfig();
+		if(config.execOnLoad()){
+			schedule.scheduleStart();
+			logger.info("register and start schedule[{}]: {}", scheduleName, config.getConfMap());
+		}else{
+			logger.info("register schedule[{}]: {}", scheduleName, config.getConfMap());
+		}
+		return schedule;
 	}
 }

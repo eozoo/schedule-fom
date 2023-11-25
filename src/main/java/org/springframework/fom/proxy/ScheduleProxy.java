@@ -46,8 +46,8 @@ public class ScheduleProxy implements MethodInterceptor {
 			return onTerminate(object, method, args, methodProxy);
 		}else if("handleCancel".equals(methodName)){
 			return handleCancel(object, method, args, methodProxy);
-		}else if("newSchedulTasks".equals(methodName)){
-			return newSchedulTasks(object, method, args, methodProxy);
+		}else if("newScheduleTasks".equals(methodName)){
+			return newScheduleTasks(object, method, args, methodProxy);
 		}else if("handleResult".equals(methodName)){
 			return handleResult(object, method, args, methodProxy);
 		}else{
@@ -108,9 +108,9 @@ public class ScheduleProxy implements MethodInterceptor {
 		return null;
 	}
 
-	// TODO 这里应该过滤掉本身自带的方法，比如在newSchedulTasks上添加@Schedule则忽略
+	// TODO 这里应该过滤掉本身自带的方法，比如在newScheduleTasks上添加@Schedule则忽略
 	@SuppressWarnings({ "unchecked", "rawtypes" })
-	private Object newSchedulTasks(Object object, Method method, Object[] args, MethodProxy methodProxy) throws Throwable{
+	private Object newScheduleTasks(Object object, Method method, Object[] args, MethodProxy methodProxy) throws Throwable{
 		Class<?>[] parameterTypes = method.getParameterTypes();
 		if(parameterTypes.length != 0){
 			return method.invoke(scheduleContext, args);
@@ -129,11 +129,12 @@ public class ScheduleProxy implements MethodInterceptor {
 
 			String scheduleName = beanName;
 			if(scheduleName.startsWith("$")){
-				scheduleName = scheduleName.substring(1, scheduleName.length() - 1);
+				scheduleName = scheduleName.substring(1);
 			}
 			for(final Method m : methods){
-				Task<Object> task = new Task<Object>(scheduleName + "-" + m.getName()){
-					@Override
+				Task<Object> task = new Task<>(scheduleName + "." + m.getName()) {
+
+						@Override
 					public Object exec() throws Exception {
 						return m.invoke(scheduleContext);
 					}
@@ -143,7 +144,7 @@ public class ScheduleProxy implements MethodInterceptor {
 		}else{
 			if((ScheduleFactory.class.isAssignableFrom(scheduleBeanClass))){
 				ScheduleFactory scheduleFactory = (ScheduleFactory)scheduleBean;
-				Collection<Task<?>> collection =  (Collection<Task<?>>)scheduleFactory.newSchedulTasks();
+				Collection<Task<?>> collection =  (Collection<Task<?>>)scheduleFactory.newScheduleTasks();
 				if(!CollectionUtils.isEmpty(collection)){
 					tasks.addAll(collection);
 				}
@@ -159,10 +160,10 @@ public class ScheduleProxy implements MethodInterceptor {
 
 			String scheduleName = beanName;
 			if(scheduleName.startsWith("$")){
-				scheduleName = scheduleName.substring(1, scheduleName.length() - 1);
+				scheduleName = scheduleName.substring(1);
 			}
 			for(final Method m : methods){
-				Task<Object> task = new Task<Object>(scheduleName + "-" + m.getName()){
+				Task<Object> task = new Task<>(scheduleName + "." + m.getName()){
 					@Override
 					public Object exec() throws Exception {
 						return m.invoke(scheduleBean);

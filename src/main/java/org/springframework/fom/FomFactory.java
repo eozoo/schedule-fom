@@ -7,28 +7,28 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 
 /**
- * 
+ *
  * @author shanhm1991@163.com
  *
  */
 public class FomFactory implements FactoryBean<ScheduleContext<?>>, ApplicationContextAware {
-	
+
 	private Class<?> scheduleClass;
-	
+
 	private String scheduleName;
-	
+
 	private String scheduleBeanName;
-	
+
 	private ScheduleConfig scheduleConfig;
-	
+
 	private ApplicationContext applicationContext;
-	
+
 	@Override
 	public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
 		this.applicationContext = applicationContext;
-		
+
 	}
-	
+
 	@Override
 	public ScheduleContext<?> getObject() throws Exception {
 		ScheduleContext<?> scheduleContext = new ScheduleContext<>();
@@ -38,9 +38,13 @@ public class FomFactory implements FactoryBean<ScheduleContext<?>>, ApplicationC
 		scheduleContext.setScheduleName(scheduleName);
 		scheduleContext.setExternal(true);
 		scheduleContext.setApplicationContext(applicationContext);
-		
+
 		ScheduleConfig config = scheduleContext.getScheduleConfig();
-		config.refresh();
+		if(scheduleBeanName != null){
+			config.refresh(scheduleBeanName);
+		}else{
+			config.refresh(scheduleName);
+		}
 		return scheduleContext;
 	}
 

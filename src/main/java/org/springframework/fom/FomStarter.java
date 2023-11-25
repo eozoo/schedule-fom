@@ -30,7 +30,7 @@ public class FomStarter implements SmartLifecycle, ApplicationContextAware {
 		for(String scheduleName : scheduleNames){
 			ScheduleContext<?> schedule = (ScheduleContext)applicationContext.getBean(scheduleName);
 			ScheduleConfig config = schedule.getScheduleConfig();
-			if(config.getBoolean(ScheduleConfig.KEY_enable, true)){
+			if(config.execOnLoad()){
 				schedule.scheduleStart();
 				logger.info("load and start schedule[{}]: {}", scheduleName, schedule.getScheduleConfig().getConfMap());
 			}else{

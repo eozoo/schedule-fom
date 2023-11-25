@@ -41,7 +41,7 @@ public class Log4jAppender extends FileAppender{
 	
 	private static final long TARDAY = 180;
 	
-	private static final long FILESIZE = 20 * 1024 * 1024;
+	private static final long FILESIZE = 20L * 1024 * 1024;
 	
 	private static final int MAXINDEX = 50;
 

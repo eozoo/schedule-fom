@@ -17,11 +17,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.DelayQueue;
-import java.util.concurrent.Future;
-import java.util.concurrent.RejectedExecutionException;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -49,10 +45,10 @@ import org.springframework.util.ReflectionUtils;
 public class ScheduleContext<E> implements ScheduleFactory<E>, CompleteHandler<E>, ResultHandler<E>, TerminateHandler, TaskCancelHandler, ApplicationContextAware {
 
 	// 所有schedule共用，以便根据id检测任务冲突
-	private static Map<String,TimedFuture<Result<?>>> submitMap = new HashMap<>(512);
+	private static final Map<String,TimedFuture<Result<?>>> submitMap = new HashMap<>(512);
 
 	// 当前提交的任务Future
-	private List<TimedFuture<Result<E>>> submitFutures = new ArrayList<>();
+	private final List<TimedFuture<Result<E>>> submitFutures = new ArrayList<>();
 
 	private final ScheduleConfig scheduleConfig = new ScheduleConfig();
 
@@ -74,7 +70,7 @@ public class ScheduleContext<E> implements ScheduleFactory<E>, CompleteHandler<E
 	private volatile long nextTime;
 
 	// 执行次数
-	private volatile long schedulTimes;
+	private final AtomicLong scheduleTimes = new AtomicLong(0);
 
 	// 是否是启动后的第一次执行
 	private boolean isFirstRun = true;
@@ -101,7 +97,7 @@ public class ScheduleContext<E> implements ScheduleFactory<E>, CompleteHandler<E
 
 	public ScheduleContext(boolean needInit){
 		if(needInit){
-			scheduleConfig.refresh();
+			scheduleConfig.refresh(scheduleBeanName);
 		}
 	}
 
@@ -146,8 +142,8 @@ public class ScheduleContext<E> implements ScheduleFactory<E>, CompleteHandler<E
 		return nextTime;
 	}
 
-	public long getSchedulTimes() {
-		return schedulTimes;
+	public long getScheduleTimes() {
+		return scheduleTimes.get();
 	}
 
 	public Logger getLogger() {
@@ -199,12 +195,12 @@ public class ScheduleContext<E> implements ScheduleFactory<E>, CompleteHandler<E
 
 	@SuppressWarnings("unchecked")
 	@Override
-	public Collection<? extends Task<E>> newSchedulTasks() throws Exception {
+	public Collection<? extends Task<E>> newScheduleTasks() throws Exception {
 		ScheduleContext<E> scheduleContext;
 		if(applicationContext != null
 				&& (scheduleContext = (ScheduleContext<E>)applicationContext.getBean(scheduleName)) != null
 				&& scheduleContext.getClass() != this.getClass()){
-			return scheduleContext.newSchedulTasks();
+			return scheduleContext.newScheduleTasks();
 		}
 
 		Task<E> task = schedul();
@@ -238,10 +234,10 @@ public class ScheduleContext<E> implements ScheduleFactory<E>, CompleteHandler<E
 			case INITED:
 			case STOPPED:
 				if(scheduleConfig.getPool().isTerminated()){
-					scheduleConfig.refresh();
+					scheduleConfig.refresh(scheduleBeanName);
 				}
 
-				enableTaskConflict = scheduleConfig.getEnableTaskConflict(); // 启动时读取一次，init时也读取一次
+				enableTaskConflict = scheduleConfig.enableTaskConflict(); // 启动时读取一次，init时也读取一次
 				scheduleThread = new ScheduleThread();
 				scheduleThread.start();
 				logger.info("schedule[{}] startup", scheduleName);
@@ -298,7 +294,7 @@ public class ScheduleContext<E> implements ScheduleFactory<E>, CompleteHandler<E
 				logger.warn("schedule[{}] is stopping, cann't execut now.", scheduleName);
 				return FomEntity.instance(501, "schedule[" + scheduleName + "] is stopping, cann't execut now.");
 			case RUNNING:
-				if(scheduleConfig.getIgnoreExecRequestWhenRunning()){
+				if(scheduleConfig.ignoreExecWhenRunning()){
 					logger.warn("schedule[{}] is already running.", scheduleName);
 					return FomEntity.instance(501, "schedule[" + scheduleName + "] is already running.");
 				}else{
@@ -340,8 +336,8 @@ public class ScheduleContext<E> implements ScheduleFactory<E>, CompleteHandler<E
 					return;
 				}
 
-				if(scheduleConfig.getDeadTime() != ScheduleConfig.DEFAULT_deadTime
-						&& scheduleConfig.getDeadTime() < System.currentTimeMillis()) {
+				if(scheduleConfig.deadTime() != ScheduleConfig.DEFAULT_deadTime
+						&& scheduleConfig.deadTime() < System.currentTimeMillis()) {
 					logger.info("schedule[{}] is going to shutdown due to deadTime", scheduleName);
 					terminate();
 					return;
@@ -350,10 +346,10 @@ public class ScheduleContext<E> implements ScheduleFactory<E>, CompleteHandler<E
 				try{
 					if(isFirstRun){
 						isFirstRun = false;
-						if(scheduleConfig.getExecOnLoad()) {
+						if(scheduleConfig.execOnLoad()) {
 							runSchedul();
-						}else if(scheduleConfig.getInitialDelay() != ScheduleConfig.DEFAULT_initialDelay) {
-							sleep(scheduleConfig.getInitialDelay());
+						}else if(scheduleConfig.initialDelay() != ScheduleConfig.DEFAULT_initialDelay) {
+							sleep(scheduleConfig.initialDelay());
 							runSchedul();
 						}else {
 							caculateNextTime(null);
@@ -396,20 +392,20 @@ public class ScheduleContext<E> implements ScheduleFactory<E>, CompleteHandler<E
 				last = new Date(lastTime);
 			}
 
-			if(scheduleConfig.getCron() != null){
+			if(scheduleConfig.cronExpression() != null){
 				if(!nextTimeHasSated.compareAndSet(true, false)){
-					nextTime = scheduleConfig.getCron().getTimeAfter(last).getTime();
+					nextTime = scheduleConfig.cronExpression().getTimeAfter(last).getTime();
 				}
 				waitTaskCompleted(completeLatch);
-			}else if(scheduleConfig.getFixedRate() > 0){
+			}else if(scheduleConfig.fixedRate() > 0){
 				if(!nextTimeHasSated.compareAndSet(true, false)){
-					nextTime = last.getTime() + scheduleConfig.getFixedRate();
+					nextTime = last.getTime() + scheduleConfig.fixedRate();
 				}
 				waitTaskCompleted(completeLatch);
-			}else if(scheduleConfig.getFixedDelay() > 0){
+			}else if(scheduleConfig.fixedDelay() > 0){
 				waitTaskCompleted(completeLatch);
 				if(!nextTimeHasSated.compareAndSet(true, false)){
-					nextTime = System.currentTimeMillis() + scheduleConfig.getFixedDelay();
+					nextTime = System.currentTimeMillis() + scheduleConfig.fixedDelay();
 				}
 			}else{
 				waitTaskCompleted(completeLatch);
@@ -423,8 +419,8 @@ public class ScheduleContext<E> implements ScheduleFactory<E>, CompleteHandler<E
 				return;
 			}
 
-			int overTime = scheduleConfig.getTaskOverTime();
-			boolean detectTimeoutOnEachTask = scheduleConfig.getDetectTimeoutOnEachTask();
+			int overTime = scheduleConfig.taskOverTime();
+			boolean detectTimeoutOnEachTask = scheduleConfig.detectTimeoutOnEachTask();
 			try {
 				if(ScheduleConfig.DEFAULT_taskOverTime == overTime){ // 默认不检测超时
 					completeLatch.waitTaskCompleted();
@@ -437,14 +433,14 @@ public class ScheduleContext<E> implements ScheduleFactory<E>, CompleteHandler<E
 								long cost = 0;
 								if(startTime > 0){
 									cost = System.currentTimeMillis() - future.getStartTime();
-									logger.info("cancle task[{}] due to time out, cost={}ms", future.getTaskId(), cost);
+									logger.warn("cancle task[{}] due to time out, cost={}ms", future.getTaskId(), cost);
 									try{
 										handleCancel(future.getTaskId(), cost);
 									}catch(Exception e){
 										logger.error("", e);
 									}
 								}else{
-									logger.info("cancle task[{}] which has not started, cost={}ms", future.getTaskId(), cost);
+									logger.warn("cancle task[{}] which has not started, cost={}ms", future.getTaskId(), cost);
 								}
 								cancleTask(future, cost);
 							}
@@ -497,7 +493,7 @@ public class ScheduleContext<E> implements ScheduleFactory<E>, CompleteHandler<E
 							logger.error("", e);
 						}
 
-						logger.info("cancle task[{}] due to time out, cost={}ms", future.getTaskId(), cost);
+						logger.warn("cancle task[{}] due to time out, cost={}ms", future.getTaskId(), cost);
 						cancleTask(future, cost);
 					}else{
 						delayQueue.add(new DelayedSingleTask(future, overTime - cost));
@@ -510,13 +506,13 @@ public class ScheduleContext<E> implements ScheduleFactory<E>, CompleteHandler<E
 
 			switchState(RUNNING);
 
-			schedulTimes++;
+			scheduleTimes.incrementAndGet();
 
 			lastTime = System.currentTimeMillis();
 
-			CompleteLatch<E> completeLatch = new CompleteLatch<>(true, schedulTimes, lastTime);
+			CompleteLatch<E> completeLatch = new CompleteLatch<>(true, scheduleTimes.get(), lastTime);
 			try{
-				Collection<? extends Task<E>> tasks = newSchedulTasks();
+				Collection<? extends Task<E>> tasks = newScheduleTasks();
 				if(tasks == null || tasks.isEmpty()){
 					return;
 				}
@@ -583,7 +579,7 @@ public class ScheduleContext<E> implements ScheduleFactory<E>, CompleteHandler<E
 			scheduleConfig.getPool().shutdown();
 			if(waitShutDown()){
 				try{
-					onTerminate(schedulTimes, lastTime);
+					onTerminate(scheduleTimes.get(), lastTime);
 				}catch(Exception e){
 					logger.error("", e);
 				}
@@ -613,7 +609,7 @@ public class ScheduleContext<E> implements ScheduleFactory<E>, CompleteHandler<E
 										logger.error("", e);
 									}
 
-									logger.info("cancle task[{}] due to terminate, cost={}ms", future.getTaskId(), cost);
+									logger.warn("cancle task[{}] due to terminate, cost={}ms", future.getTaskId(), cost);
 									cancleTask(future, cost);
 								}
 							}
@@ -654,7 +650,7 @@ public class ScheduleContext<E> implements ScheduleFactory<E>, CompleteHandler<E
 		task.setScheduleContext(ScheduleContext.this);
 
 		TimedFuture<Result<E>> future =
-				scheduleConfig.getPool().submit(task, scheduleConfig.getTaskOverTime(), scheduleConfig.getEnableTaskConflict());
+				scheduleConfig.getPool().submit(task, scheduleConfig.taskOverTime(), scheduleConfig.enableTaskConflict());
 		if(task.getCompleteLatch() != null){
 			task.getCompleteLatch().increaseTaskNotCompleted();
 		}
@@ -682,9 +678,9 @@ public class ScheduleContext<E> implements ScheduleFactory<E>, CompleteHandler<E
 				futureList = submitWithNoConflict(tasks, completeLatch);
 			}
 
-			long overTime = scheduleConfig.getTaskOverTime();
+			long overTime = scheduleConfig.taskOverTime();
 			if(ScheduleConfig.DEFAULT_taskOverTime != overTime){
-				DelayedThread.detectTimeout(futureList, scheduleConfig.getDetectTimeoutOnEachTask());
+				DelayedThread.detectTimeout(futureList, scheduleConfig.detectTimeoutOnEachTask());
 			}
 		}finally{
 			completeLatch.submitCompleted();
@@ -896,7 +892,7 @@ public class ScheduleContext<E> implements ScheduleFactory<E>, CompleteHandler<E
 	}
 
 	protected void record(Result<E> result){
-		scheduleStatistics.record(result);
+		scheduleStatistics.record(scheduleBeanName, result);
 		try{
 			handleResult(result);
 		}catch(Exception e){

@@ -49,7 +49,7 @@ public class FomBeanDefinitionRegistrar implements ImportBeanDefinitionRegistrar
 		registry.registerBeanDefinition("fomStarter", fomStarter);
 
 		// FomExternalRegister
-		RootBeanDefinition fomExternalRegister = new RootBeanDefinition(FomExternalRegister.class);
+		RootBeanDefinition fomExternalRegister = new RootBeanDefinition(FomRegister.class);
 		registry.registerBeanDefinition("fomExternalRegister", fomExternalRegister);
 
 		// FomBeanDefinition
@@ -66,7 +66,7 @@ public class FomBeanDefinitionRegistrar implements ImportBeanDefinitionRegistrar
 				}
 
 				Fom fom = clazz.getAnnotation(Fom.class);
-				if(fom != null && !fom.external()){ // 忽略external
+				if(fom != null && fom.autoLoad()){
 					parseFomSchedule(beanName, clazz, beanDefinition, fom, registry);
 				}
 			}

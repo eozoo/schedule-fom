@@ -21,7 +21,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.springframework.util.Assert;
 
 /**
- * 
+ *
  * @author shanhm1991@163.com
  *
  */
@@ -93,11 +93,11 @@ public class ScheduleStatistics {
 		return map;
 	}
 
-	void record(Result<?> result){
+	void record(String scheduleName, Result<?> result){
 		if(result.isSuccess()){
 			record(result, success, successMap);
 		}else{
-			record(result, failed, failedMap); 
+			record(result, failed, failedMap);
 		}
 	}
 
@@ -107,14 +107,14 @@ public class ScheduleStatistics {
 		String day = new SimpleDateFormat("yyyy/MM/dd").format(System.currentTimeMillis());
 		ConcurrentLinkedQueue<Result<?>> queue = statMap.get(day);
 		// 尽量避免使用同步，虽然api中免不了也有同步的使用
-		if(queue == null){ 
+		if(queue == null){
 			queue = new ConcurrentLinkedQueue<>();
 			ConcurrentLinkedQueue<Result<?>> exist = statMap.putIfAbsent(day, queue);
 			if(exist == null){
-				// dayHasSaved由每天第一个放入queue的线程负责检测，不存在多线程访问场景  
+				// dayHasSaved由每天第一个放入queue的线程负责检测，不存在多线程访问场景
 				// 虽然每次不是同一个线程访问，但一天只检测一次，线程安全问题暂且忽略
 				dayHasSaved.add(day);
-				while(dayHasSaved.size() > statConfigMap.get(STAT_DAY)){ 
+				while(dayHasSaved.size() > statConfigMap.get(STAT_DAY)){
 					statMap.remove(dayHasSaved.removeLast());
 				}
 			}else{
@@ -177,7 +177,7 @@ public class ScheduleStatistics {
 	}
 
 	// endDay yyyy/MM/dd
-	Map<String, Object> getSuccessStat(String statDay) throws ParseException {  
+	Map<String, Object> getSuccessStat(String statDay) throws ParseException {
 		int level_1;
 		int level_2;
 		int level_3;
@@ -195,12 +195,12 @@ public class ScheduleStatistics {
 		}
 
 		Map<String, Map<String, Object>> statMap = new HashMap<>();
-		int countLv1 = 0; 
-		int countLv2 = 0; 
-		int countLv3 = 0; 
-		int countLv4 = 0; 
-		int countLv5 = 0; 
-		int countLv6 = 0; 
+		int countLv1 = 0;
+		int countLv2 = 0;
+		int countLv3 = 0;
+		int countLv4 = 0;
+		int countLv5 = 0;
+		int countLv6 = 0;
 		long min = 0;
 		long max = 0;
 		long total = 0;
@@ -210,12 +210,12 @@ public class ScheduleStatistics {
 			String day = entry.getKey();
 			Queue<Result<?>> queue = entry.getValue();
 
-			int dayCountLv1 = 0; 
-			int dayCountLv2 = 0; 
-			int dayCountLv3 = 0; 
-			int dayCountLv4 = 0; 
-			int dayCountLv5 = 0; 
-			int dayCountLv6 = 0; 
+			int dayCountLv1 = 0;
+			int dayCountLv2 = 0;
+			int dayCountLv3 = 0;
+			int dayCountLv4 = 0;
+			int dayCountLv5 = 0;
+			int dayCountLv6 = 0;
 			long dayMin = 0;
 			long datMax = 0;
 			long dayTotal = 0;
@@ -331,12 +331,12 @@ public class ScheduleStatistics {
 			successMap.put("day" + i, dayMap);
 
 			calendar.add(Calendar.DAY_OF_MONTH, -1);
-			statDay = dateFormata.format(calendar.getTime()); 
+			statDay = dateFormata.format(calendar.getTime());
 		}
 		return successMap;
 	}
 
-	List<Map<String, String>> getFailedStat() {  
+	List<Map<String, String>> getFailedStat() {
 		List<Map<String, String>> failes = new ArrayList<>();
 
 		DateFormat dateFormata = new SimpleDateFormat("yyyyMMdd HH:mm:ss SSS");
@@ -351,7 +351,7 @@ public class ScheduleStatistics {
 			for(Result<?> result : queue){
 				Map<String, String> map = new HashMap<>();
 				map.put("id", result.getTaskId());
-				map.put("submitTime", dateFormata.format(result.getSubmitTime())); 
+				map.put("submitTime", dateFormata.format(result.getSubmitTime()));
 				map.put("startTime", dateFormata.format(result.getStartTime()));
 				map.put("costTime", result.getCostTime() + "ms");
 
@@ -365,7 +365,7 @@ public class ScheduleStatistics {
 					}
 
 					StringBuilder builder = new StringBuilder(throwable.toString()).append(":<br>");
-					for(StackTraceElement stack : throwable.getStackTrace()){ 
+					for(StackTraceElement stack : throwable.getStackTrace()){
 						builder.append(stack).append("<br>");
 					}
 					map.put("cause", builder.toString());

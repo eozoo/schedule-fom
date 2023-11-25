@@ -28,7 +28,7 @@ import org.springframework.util.StringUtils;
 import org.springframework.util.StringValueResolver;
 
 /**
- * 
+ *
  * @author shanhm1991@163.com
  *
  */
@@ -54,24 +54,24 @@ public class FomBeanPostProcessor implements BeanPostProcessor, BeanFactoryAware
 		if(!(ScheduleContext.class.isAssignableFrom(clazz))){
 			return bean;
 		}
-		
+
 		ScheduleContext<?> scheduleContext = (ScheduleContext<?>)bean;
-		
+
 		// 插一段external专门处理
-		if(scheduleContext.isExternal()) { 
+		if(scheduleContext.isExternal()) {
 			return processExternal(scheduleContext, beanName);
 		}
-		
-		String scheduleBeanName = scheduleContext.getScheduleBeanName(); 
+
+		String scheduleBeanName = scheduleContext.getScheduleBeanName();
 		Fom fom = scheduleContext.getClass().getAnnotation(Fom.class);
-		
+
 		// @Bean不处理
 		if(!StringUtils.hasText(scheduleBeanName) && fom == null){
-			scheduleContext.setScheduleName(beanName);  
+			scheduleContext.setScheduleName(beanName);
 			scheduleContext.setLogger(LoggerFactory.getLogger(scheduleContext.getClass()));
 			return bean;
 		}
-		
+
 		Object scheduleBean = null;
 		if(StringUtils.hasText(scheduleBeanName)){
 			scheduleBean = beanFactory.getBean(scheduleBeanName);
@@ -81,8 +81,8 @@ public class FomBeanPostProcessor implements BeanPostProcessor, BeanFactoryAware
 		fom = clazz.getAnnotation(Fom.class);
 		if(fom == null){
 			fom = scheduleBean.getClass().getAnnotation(Fom.class);
-			scheduleContext.setLogger(LoggerFactory.getLogger(scheduleBean.getClass())); 
-		}else{ 
+			scheduleContext.setLogger(LoggerFactory.getLogger(scheduleBean.getClass()));
+		}else{
 			scheduleContext.setLogger(LoggerFactory.getLogger(clazz));
 		}
 
@@ -102,12 +102,16 @@ public class FomBeanPostProcessor implements BeanPostProcessor, BeanFactoryAware
 		} catch (Exception e) {
 			throw new ApplicationContextException("", e);
 		}
-		
+
 		// 刷新配置
-		scheduleConfig.refresh();
-		
+		if(StringUtils.hasText(scheduleBeanName)){
+			scheduleConfig.refresh(scheduleBeanName);
+		}else{
+			scheduleConfig.refresh(beanName);
+		}
+
 		// 初始化时提前设置一下，因为运行过程中不允许修改
-		scheduleContext.setEnableTaskConflict(scheduleConfig.getEnableTaskConflict());
+		scheduleContext.setEnableTaskConflict(scheduleConfig.enableTaskConflict());
 
 		// 创建代理 注册容器
 		Enhancer enhancer = new Enhancer();
@@ -115,7 +119,7 @@ public class FomBeanPostProcessor implements BeanPostProcessor, BeanFactoryAware
 		enhancer.setCallback(new ScheduleProxy(beanName, scheduleContext, scheduleBean));
 		return enhancer.create();
 	}
-	
+
 	private Object processExternal(ScheduleContext<?> scheduleContext, String beanName) {
 		beanFactory.registerSingleton("$EXTERNAL$" + beanName, scheduleContext);
 		Object scheduleBean = beanFactory.getBean(scheduleContext.getScheduleBeanName());
@@ -125,7 +129,7 @@ public class FomBeanPostProcessor implements BeanPostProcessor, BeanFactoryAware
 		return enhancer.create();
 	}
 
-	private void loadCache(String beanName, ScheduleContext<?> scheduleContext) throws Exception{ 
+	private void loadCache(String beanName, ScheduleContext<?> scheduleContext) throws Exception{
 		String cacheType = valueResolver.resolveStringValue("${spring.fom.cache.type:file}");
 		if("file".equalsIgnoreCase(cacheType)){
 			loadFromFile(beanName, scheduleContext);
@@ -133,7 +137,7 @@ public class FomBeanPostProcessor implements BeanPostProcessor, BeanFactoryAware
 			loadFromRedis(beanName, scheduleContext);
 		}
 	}
-	
+
 	@SuppressWarnings("unchecked")
 	private void loadFromFile(String beanName, ScheduleContext<?> scheduleContext) throws Exception{
 		String cacheFilePath = valueResolver.resolveStringValue("${spring.fom.cache.file.path:cache/schedule}");
@@ -141,14 +145,14 @@ public class FomBeanPostProcessor implements BeanPostProcessor, BeanFactoryAware
 		if(!file.exists()){
 			return;
 		}
-		
+
 		try(FileInputStream input = new FileInputStream(file);
 				ObjectInputStream ois = new ObjectInputStream(input);){
 			HashMap<String, Object> map = (HashMap<String, Object>)ois.readObject();
 
 			String cron = (String)map.remove(ScheduleConfig.KEY_cron);
 			ScheduleConfig scheduleConfig = scheduleContext.getScheduleConfig();
-			scheduleConfig.setCron(cron);
+			scheduleConfig.cron(cron);
 
 			Map<String, Object> originalMap = scheduleConfig.getOriginalMap();
 			originalMap.putAll(map);
@@ -161,7 +165,7 @@ public class FomBeanPostProcessor implements BeanPostProcessor, BeanFactoryAware
 			scheduleContext.valueEnvirmentField(envirmentField);
 		}
 	}
-	
+
 	private void loadFromRedis(String beanName, ScheduleContext<?> scheduleContext) throws Exception{
 		// TODO
 	}
@@ -179,7 +183,7 @@ public class FomBeanPostProcessor implements BeanPostProcessor, BeanFactoryAware
 	private boolean setCron(ScheduleConfig scheduleConfig, String cron){
 		if(StringUtils.hasText(cron)){
 			cron = valueResolver.resolveStringValue(cron);
-			scheduleConfig.setCron(cron); 
+			scheduleConfig.cron(cron);
 			return true;
 		}
 		return false;
@@ -188,11 +192,11 @@ public class FomBeanPostProcessor implements BeanPostProcessor, BeanFactoryAware
 	private boolean setFixedRate(ScheduleConfig scheduleConfig, long fixedRate, String fixedRateString){
 		if(StringUtils.hasText(fixedRateString)){
 			fixedRateString = valueResolver.resolveStringValue(fixedRateString);
-			if(scheduleConfig.setFixedRate(Long.parseLong(fixedRateString))){
+			if(scheduleConfig.fixedRate(Long.parseLong(fixedRateString))){
 				return true;
 			}
 		}
-		if(scheduleConfig.setFixedRate(fixedRate)){
+		if(scheduleConfig.fixedRate(fixedRate)){
 			return true;
 		}
 		return false;
@@ -201,31 +205,31 @@ public class FomBeanPostProcessor implements BeanPostProcessor, BeanFactoryAware
 	private boolean setFixedDelay(ScheduleConfig scheduleConfig, long fixedDelay, String fixedDelayString){
 		if(StringUtils.hasText(fixedDelayString)){
 			fixedDelayString = valueResolver.resolveStringValue(fixedDelayString);
-			if(scheduleConfig.setFixedDelay(Long.parseLong(fixedDelayString))){
+			if(scheduleConfig.fixedDelay(Long.parseLong(fixedDelayString))){
 				return true;
 			}
 		}
-		if(scheduleConfig.setFixedDelay(fixedDelay)){
+		if(scheduleConfig.fixedDelay(fixedDelay)){
 			return true;
 		}
 		return false;
 	}
 
 	private void setConf(ScheduleConfig scheduleConfig, Fom fom){
-		
-		scheduleConfig.setInitialDelay(fom.initialDelay()); 
-		
-		scheduleConfig.setDeadTime(fom.deadTime());
-		
+
+		scheduleConfig.initialDelay(fom.initialDelay());
+
+		scheduleConfig.deadTime(fom.deadTime());
+
 		String threadCoreString = fom.threadCoreString();
 		if(StringUtils.hasText(threadCoreString)){
 			threadCoreString = valueResolver.resolveStringValue(threadCoreString);
 			int threadCore = Integer.parseInt(threadCoreString);
 			if(ScheduleConfig.DEFAULT_threadCore != threadCore){
-				scheduleConfig.setThreadCore(threadCore);
+				scheduleConfig.threadCore(threadCore);
 			}
 		}else if(ScheduleConfig.DEFAULT_threadCore != fom.threadCore()){
-			scheduleConfig.setThreadCore(fom.threadCore());
+			scheduleConfig.threadCore(fom.threadCore());
 		}
 
 		String threadMaxString = fom.threadMaxString();
@@ -233,60 +237,54 @@ public class FomBeanPostProcessor implements BeanPostProcessor, BeanFactoryAware
 			threadMaxString = valueResolver.resolveStringValue(threadMaxString);
 			int threadMax = Integer.parseInt(threadMaxString);
 			if(ScheduleConfig.DEFAULT_threadCore != threadMax){
-				scheduleConfig.setThreadMax(threadMax);
+				scheduleConfig.threadMax(threadMax);
 			}
 		}else if(ScheduleConfig.DEFAULT_threadCore != fom.threadMax()){
-			scheduleConfig.setThreadMax(fom.threadMax());
+			scheduleConfig.threadMax(fom.threadMax());
 		}
 
 		String queueSize = fom.queueSizeString();
-		if(!StringUtils.hasText(queueSize) 
-				|| !scheduleConfig.setQueueSize(Integer.parseInt(valueResolver.resolveStringValue(queueSize)))){
-			scheduleConfig.setQueueSize(fom.queueSize());
+		if(!StringUtils.hasText(queueSize)
+				|| !scheduleConfig.queueSize(Integer.parseInt(valueResolver.resolveStringValue(queueSize)))){
+			scheduleConfig.queueSize(fom.queueSize());
 		}
 
 		String threadAliveTime = fom.threadAliveTimeString();
-		if(!StringUtils.hasText(threadAliveTime) 
-				|| !scheduleConfig.setThreadAliveTime(Integer.parseInt(valueResolver.resolveStringValue(threadAliveTime)))){
-			scheduleConfig.setThreadAliveTime(fom.threadAliveTime());
+		if(!StringUtils.hasText(threadAliveTime)
+				|| !scheduleConfig.threadAliveTime(Integer.parseInt(valueResolver.resolveStringValue(threadAliveTime)))){
+			scheduleConfig.threadAliveTime(fom.threadAliveTime());
 		}
 
-		scheduleConfig.setRemark(valueResolver.resolveStringValue(fom.remark()));
+		scheduleConfig.remark(valueResolver.resolveStringValue(fom.remark()));
 
 		String execOnLoad = fom.execOnLoadString();
-		if(!StringUtils.hasText(execOnLoad) 
-				|| !scheduleConfig.setExecOnLoad(Boolean.parseBoolean(valueResolver.resolveStringValue(execOnLoad)))){
-			scheduleConfig.setExecOnLoad(fom.execOnLoad());
+		if(!StringUtils.hasText(execOnLoad)
+				|| !scheduleConfig.execOnLoad(Boolean.parseBoolean(valueResolver.resolveStringValue(execOnLoad)))){
+			scheduleConfig.execOnLoad(fom.execOnLoad());
 		}
 
 		String taskOverTime = fom.taskOverTimeString();
-		if(!StringUtils.hasText(taskOverTime) 
-				|| !scheduleConfig.setTaskOverTime(Integer.parseInt(valueResolver.resolveStringValue(taskOverTime)))){
-			scheduleConfig.setTaskOverTime(fom.taskOverTime());
+		if(!StringUtils.hasText(taskOverTime)
+				|| !scheduleConfig.taskOverTime(Integer.parseInt(valueResolver.resolveStringValue(taskOverTime)))){
+			scheduleConfig.taskOverTime(fom.taskOverTime());
 		}
 
 		String detectTimeoutOnEachTask = fom.detectTimeoutOnEachTaskString();
-		if(!StringUtils.hasText(detectTimeoutOnEachTask) 
-				|| !scheduleConfig.setDetectTimeoutOnEachTask(Boolean.parseBoolean(valueResolver.resolveStringValue(detectTimeoutOnEachTask)))){
-			scheduleConfig.setDetectTimeoutOnEachTask(fom.detectTimeoutOnEachTask());
+		if(!StringUtils.hasText(detectTimeoutOnEachTask)
+				|| !scheduleConfig.detectTimeoutOnEachTask(Boolean.parseBoolean(valueResolver.resolveStringValue(detectTimeoutOnEachTask)))){
+			scheduleConfig.detectTimeoutOnEachTask(fom.detectTimeoutOnEachTask());
 		}
 
-		String ignoreExecRequestWhenRunning = fom.ignoreExecRequestWhenRunningString();
-		if(!StringUtils.hasText(ignoreExecRequestWhenRunning) 
-				|| !scheduleConfig.setIgnoreExecRequestWhenRunning(Boolean.parseBoolean(valueResolver.resolveStringValue(ignoreExecRequestWhenRunning)))){
-			scheduleConfig.setIgnoreExecRequestWhenRunning(fom.ignoreExecRequestWhenRunning());
+		String ignoreExecRequestWhenRunning = fom.ignoreExecWhenRunningString();
+		if(!StringUtils.hasText(ignoreExecRequestWhenRunning)
+				|| !scheduleConfig.ignoreExecWhenRunning(Boolean.parseBoolean(valueResolver.resolveStringValue(ignoreExecRequestWhenRunning)))){
+			scheduleConfig.ignoreExecWhenRunning(fom.ignoreExecWhenRunning());
 		}
 
 		String enableTaskConflict = fom.enableTaskConflictString();
-		if(!StringUtils.hasText(enableTaskConflict) 
-				|| !scheduleConfig.setEnableTaskConflict(Boolean.parseBoolean(valueResolver.resolveStringValue(enableTaskConflict)))){
-			scheduleConfig.setEnableTaskConflict(fom.enableTaskConflict());
-		}
-
-		String enableString = fom.enableString();
-		if(!StringUtils.hasText(enableString) 
-				|| !scheduleConfig.setEnable(Boolean.parseBoolean(valueResolver.resolveStringValue(enableString)))){
-			scheduleConfig.setEnable(fom.enable());
+		if(!StringUtils.hasText(enableTaskConflict)
+				|| !scheduleConfig.enableTaskConflict(Boolean.parseBoolean(valueResolver.resolveStringValue(enableTaskConflict)))){
+			scheduleConfig.enableTaskConflict(fom.enableTaskConflict());
 		}
 	}
 
@@ -322,7 +320,7 @@ public class FomBeanPostProcessor implements BeanPostProcessor, BeanFactoryAware
 					fieldList.add(field);
 					scheduleConfig.set(key, confValue);
 				}
-				
+
 				// 配置集合中的值尽量按照对应属性的类型来（如果可以的话）
 				if(list.size() == 1) {
 					switch(field.getGenericType().toString()){

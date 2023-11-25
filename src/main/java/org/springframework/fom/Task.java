@@ -5,7 +5,6 @@ import java.util.concurrent.Callable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.fom.ScheduleContext.CompleteLatch;
-import org.springframework.util.StringUtils;
 
 /**
  *
@@ -48,7 +47,6 @@ public abstract class Task<E> implements Callable<Result<E>> {
 
 	@Override
 	public final Result<E> call() throws InterruptedException {
-		Thread.currentThread().setName("schedule[" + id + "]");
 		localSchedule.set(scheduleContext);
 		logger.debug("task started.");
 
@@ -66,7 +64,11 @@ public abstract class Task<E> implements Callable<Result<E>> {
 		}
 
 		if(result.isSuccess()){
-			logger.debug("task success, cost={}ms, restult={}", result.getCostTime(), result.getContent());
+			if(result.getContent() != null){
+				logger.debug("{} complete {}ms {}", id, result.getCostTime(), result.getContent());
+			}else{
+				logger.debug("{} complete {}ms", id, result.getCostTime());
+			}
 		}else{
 			Throwable e = null;
 			if(result.getThrowable() != null){
@@ -77,7 +79,11 @@ public abstract class Task<E> implements Callable<Result<E>> {
 				}
 				e = throwable;
 			}
-			logger.error("task failed, cost={}ms, restult={}", result.getCostTime(), result.getContent(), e);
+			if(result.getContent() != null){
+				logger.error("{} failed {}ms {}", id, result.getCostTime(), result.getContent(), e);
+			}else{
+				logger.error("{} failed {}ms", id, result.getCostTime(), e);
+			}
 		}
 		return result;
 	}
@@ -98,6 +104,7 @@ public abstract class Task<E> implements Callable<Result<E>> {
 			}catch(Throwable e) {
 				logger.error("", e);
 			}
+			localSchedule.remove();
 		}
 	}
 
