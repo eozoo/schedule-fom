@@ -6,6 +6,7 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
+import org.slf4j.event.Level;
 import org.springframework.core.annotation.AliasFor;
 import org.springframework.fom.ScheduleConfig;
 import org.springframework.stereotype.Component;
@@ -23,6 +24,8 @@ public @interface Fom {
 
 	@AliasFor(annotation = Component.class)
 	String value() default "";
+
+	Level level() default Level.WARN;
 
 	/**
 	 * 是否自动加载

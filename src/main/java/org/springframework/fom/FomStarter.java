@@ -32,9 +32,9 @@ public class FomStarter implements SmartLifecycle, ApplicationContextAware {
 			ScheduleConfig config = schedule.getScheduleConfig();
 			if(config.execOnLoad()){
 				schedule.scheduleStart();
-				logger.info("load and start schedule[{}]: {}", scheduleName, schedule.getScheduleConfig().getConfMap());
+				logger.info("load and start schedule-{}: {}", scheduleName, schedule.getScheduleConfig().getConfMap());
 			}else{
-				logger.info("load schedule[{}]: {}", scheduleName, schedule.getScheduleConfig().getConfMap());
+				logger.info("load schedule-{}: {}", scheduleName, schedule.getScheduleConfig().getConfMap());
 			}
 		}
 		new DelayedThread().start(); // 启动一个守护线程，检测所有手动提交的任务超时情况

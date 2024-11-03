@@ -4,6 +4,7 @@ import java.util.concurrent.Callable;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.slf4j.event.Level;
 import org.springframework.fom.ScheduleContext.CompleteLatch;
 
 /**
@@ -48,7 +49,9 @@ public abstract class Task<E> implements Callable<Result<E>> {
 	@Override
 	public final Result<E> call() throws InterruptedException {
 		localSchedule.set(scheduleContext);
-		logger.debug("task started.");
+		if(logger.isDebugEnabled() || (scheduleContext != null && scheduleContext.getScheduleConfig().logLevel() <= Level.DEBUG.toInt())){
+			logger.info("task started.");
+		}
 
 		this.startTime = System.currentTimeMillis();
 		final Result<E> result = new Result<>(id, submitTime, startTime);
@@ -63,13 +66,15 @@ public abstract class Task<E> implements Callable<Result<E>> {
 			scheduleContext.record(result);
 		}
 
-		if(result.isSuccess()){
-			if(result.getContent() != null){
-				logger.debug("{} complete {}ms {}", id, result.getCostTime(), result.getContent());
-			}else{
-				logger.debug("{} complete {}ms", id, result.getCostTime());
+		if (result.isSuccess()) {
+			if (logger.isDebugEnabled() || (scheduleContext != null && scheduleContext.getScheduleConfig().logLevel() <= Level.INFO.toInt())) {
+				if (result.getContent() != null) {
+					logger.info("{} complete {}ms {}", id, result.getCostTime(), result.getContent());
+				} else {
+					logger.info("{} complete {}ms", id, result.getCostTime());
+				}
 			}
-		}else{
+		} else {
 			Throwable e = null;
 			if(result.getThrowable() != null){
 				Throwable throwable = result.getThrowable();

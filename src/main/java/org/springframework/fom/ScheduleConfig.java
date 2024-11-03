@@ -10,9 +10,12 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
+import org.slf4j.event.Level;
 import org.springframework.fom.quartz.CronExpression;
 import org.springframework.util.Assert;
 import org.springframework.util.StringUtils;
+
+import static org.slf4j.event.Level.WARN;
 
 /**
  *
@@ -25,6 +28,11 @@ public class ScheduleConfig {
 	 * 启动时是否执行
 	 */
 	public static final String KEY_execOnLoad = "execOnLoad";
+
+	/**
+	 * 日志级别
+	 */
+	public static final String KEY_logLevel = "logLevel";
 
 	/**
 	 * 定时计划：cron
@@ -162,6 +170,7 @@ public class ScheduleConfig {
 	private final Map<String, List<Field>> envirmentConf = new HashMap<>();
 
 	static{
+		internalConf.put(KEY_logLevel, WARN.toInt());
 		internalConf.put(KEY_cron, "");
 		internalConf.put(KEY_fixedRate,  DEFAULT_fixedRate);
 		internalConf.put(KEY_fixedDelay, DEFAULT_fixedDelay);
@@ -310,6 +319,14 @@ public class ScheduleConfig {
 	}
 
 	// get/set of internal config
+	public int logLevel(){
+		return MapUtils.getIntValue(confMap, KEY_logLevel, WARN.toInt());
+	}
+
+	public void logLevel(Level level){
+		confMap.put(KEY_logLevel, level.toInt());
+	}
+
 	public CronExpression cronExpression(){
 		return (CronExpression)confMap.get(KEY_cron);
 	}
@@ -445,7 +462,7 @@ public class ScheduleConfig {
 	}
 
 	public int taskOverTime(){
-		return MapUtils.getIntValue(confMap, DEFAULT_taskOverTime);
+		return MapUtils.getIntValue(confMap, KEY_taskOverTime, DEFAULT_taskOverTime);
 	}
 
 	public boolean taskOverTime(int overTime){

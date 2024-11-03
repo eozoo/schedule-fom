@@ -24,6 +24,7 @@ import java.util.concurrent.atomic.AtomicLong;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.slf4j.event.Level;
 import org.springframework.beans.BeansException;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationContext;
@@ -240,15 +241,15 @@ public class ScheduleContext<E> implements ScheduleFactory<E>, CompleteHandler<E
 				enableTaskConflict = scheduleConfig.enableTaskConflict(); // 启动时读取一次，init时也读取一次
 				scheduleThread = new ScheduleThread();
 				scheduleThread.start();
-				logger.info("schedule[{}] startup", scheduleName);
-				return FomEntity.instance(200, "schedule[" + scheduleName + "] startup.");
+				logger.info("schedule-{} startup", scheduleName);
+				return FomEntity.instance(200, "schedule-" + scheduleName + " startup.");
 			case STOPPING:
-				logger.warn("schedule[{}] is stopping, cann't startup.", scheduleName);
-				return FomEntity.instance(501, "schedule[" + scheduleName + "] is stopping, cann't startup.");
+				logger.warn("schedule-{} is stopping, cann't startup.", scheduleName);
+				return FomEntity.instance(501, "schedule-" + scheduleName + " is stopping, cann't startup.");
 			case RUNNING:
 			case SLEEPING:
-				logger.warn("schedule[{}] was already startup.", scheduleName);
-				return FomEntity.instance(501, "schedule[" + scheduleName + "] was already startup.");
+				logger.warn("schedule-{} was already startup.", scheduleName);
+				return FomEntity.instance(501, "schedule-" + scheduleName + " was already startup.");
 			default:
 				return FomEntity.instance(501, "schedule state invalid.");
 			}
@@ -259,14 +260,14 @@ public class ScheduleContext<E> implements ScheduleFactory<E>, CompleteHandler<E
 		synchronized (this) {
 			switch(state){
 			case INITED:
-				logger.warn("schedule[{}] was not startup.", scheduleName);
-				return FomEntity.instance(501, "schedule[" + scheduleName + "] was not startup.");
+				logger.warn("schedule-{} was not startup.", scheduleName);
+				return FomEntity.instance(501, "schedule-" + scheduleName + " was not startup.");
 			case STOPPED:
-				logger.warn("schedule[{}] was already stopped.", scheduleName);
-				return FomEntity.instance(501, "schedule[" + scheduleName + "] was already stopped.");
+				logger.warn("schedule-{} was already stopped.", scheduleName);
+				return FomEntity.instance(501, "schedule-" + scheduleName + " was already stopped.");
 			case STOPPING:
-				logger.warn("schedule[{}] is stopping, cann't stop.", scheduleName);
-				return FomEntity.instance(501, "schedule[" + scheduleName + "] is already stopping.");
+				logger.warn("schedule-{} is stopping, cann't stop.", scheduleName);
+				return FomEntity.instance(501, "schedule-" + scheduleName + " is already stopping.");
 			case RUNNING:
 			case SLEEPING:
 				state = STOPPING;
@@ -275,8 +276,8 @@ public class ScheduleContext<E> implements ScheduleFactory<E>, CompleteHandler<E
 					state = STOPPED;
 					isFirstRun = true;
 				}
-				logger.info("schedule[{}] will stop soon.", scheduleName);
-				return FomEntity.instance(200, "schedule[" + scheduleName + "] will stop soon.");
+				logger.info("schedule-{} will stop soon.", scheduleName);
+				return FomEntity.instance(200, "schedule-" + scheduleName + " will stop soon.");
 			default:
 				return FomEntity.instance(501, "schedule state invalid.");
 			}
@@ -288,28 +289,28 @@ public class ScheduleContext<E> implements ScheduleFactory<E>, CompleteHandler<E
 			switch(state){
 			case INITED:
 			case STOPPED:
-				logger.warn("schedule[{}] was not startup, cann't execut now.", scheduleName);
-				return FomEntity.instance(501, "schedule[" + scheduleName + "] was not startup, cann't execut now.");
+				logger.warn("schedule-{} was not startup, cann't execut now.", scheduleName);
+				return FomEntity.instance(501, "schedule-" + scheduleName + " was not startup, cann't execut now.");
 			case STOPPING:
-				logger.warn("schedule[{}] is stopping, cann't execut now.", scheduleName);
-				return FomEntity.instance(501, "schedule[" + scheduleName + "] is stopping, cann't execut now.");
+				logger.warn("schedule-{} is stopping, cann't execut now.", scheduleName);
+				return FomEntity.instance(501, "schedule-" + scheduleName + " is stopping, cann't execut now.");
 			case RUNNING:
 				if(scheduleConfig.ignoreExecWhenRunning()){
-					logger.warn("schedule[{}] is already running.", scheduleName);
-					return FomEntity.instance(501, "schedule[" + scheduleName + "] is already running.");
+					logger.warn("schedule-{} is already running.", scheduleName);
+					return FomEntity.instance(501, "schedule-" + scheduleName + " is already running.");
 				}else{
 					if(!nextTimeHasSated.compareAndSet(false, true)){
-						logger.info("schedule[{}] is running, and exec was already requested.", scheduleName);
-						return FomEntity.instance(501, "schedule[" + scheduleName + "] is running, and exec was already requested.");
+						logger.info("schedule-{} is running, and exec was already requested.", scheduleName);
+						return FomEntity.instance(501, "schedule-" + scheduleName + " is running, and exec was already requested.");
 					}
 					nextTime = System.currentTimeMillis();
-					logger.info("schedule[{}] is running, and will re-exec immediately after completion.", scheduleName);
-					FomEntity.instance(200, "schedule[" + scheduleName + "]  is running, and will re-exec immediately after completion .");
+					logger.info("schedule-{} is running, and will re-exec immediately after completion.", scheduleName);
+					FomEntity.instance(200, "schedule-" + scheduleName + "  is running, and will re-exec immediately after completion .");
 				}
 			case SLEEPING:
 				scheduleThread.interrupt();
-				logger.info("schedule[{}] execute now.", scheduleName);
-				return FomEntity.instance(200, "schedule[" + scheduleName + "] execute now.");
+				logger.info("schedule-{} execute now.", scheduleName);
+				return FomEntity.instance(200, "schedule-" + scheduleName + " execute now.");
 			default:
 				return FomEntity.instance(501, "schedule state invalid.");
 			}
@@ -321,7 +322,7 @@ public class ScheduleContext<E> implements ScheduleFactory<E>, CompleteHandler<E
 	private class ScheduleThread extends Thread {
 
 		public ScheduleThread(){
-			this.setName("schedule[" + scheduleName + "]");
+			this.setName("schedule-" + scheduleName);
 		}
 
 		@Override
@@ -338,7 +339,7 @@ public class ScheduleContext<E> implements ScheduleFactory<E>, CompleteHandler<E
 
 				if(scheduleConfig.deadTime() != ScheduleConfig.DEFAULT_deadTime
 						&& scheduleConfig.deadTime() < System.currentTimeMillis()) {
-					logger.info("schedule[{}] is going to shutdown due to deadTime", scheduleName);
+					logger.info("schedule-{} is going to shutdown due to deadTime", scheduleName);
 					terminate();
 					return;
 				}
@@ -620,13 +621,13 @@ public class ScheduleContext<E> implements ScheduleFactory<E>, CompleteHandler<E
 
 				try {
 					if(scheduleConfig.getPool().awaitTermination(1, TimeUnit.DAYS)){
-						logger.info("schedule[{}] stoped.", scheduleName);
+						logger.info("schedule-{} stopped.", scheduleName);
 						return true;
 					}else if(isStopping){
-						logger.warn("schedule[{}] is still stopping, though has waiting for a day.", scheduleName);
+						logger.warn("schedule-{} is still stopping, though has waiting for a day.", scheduleName);
 					}
 				} catch (InterruptedException e) { // 忽略所有中断请求
-					logger.warn("interrupt ignored when waiting task completetion.");
+					logger.warn("interrupt ignored when waiting task completion");
 				}
 			}
 		}
@@ -654,7 +655,9 @@ public class ScheduleContext<E> implements ScheduleFactory<E>, CompleteHandler<E
 		if(task.getCompleteLatch() != null){
 			task.getCompleteLatch().increaseTaskNotCompleted();
 		}
-		logger.debug("task[{}] submitted.", task.getTaskId());
+		if(logger.isDebugEnabled() || scheduleConfig.logLevel() <= Level.DEBUG.toInt()){
+			logger.info("task[{}] submitted.", task.getTaskId());
+		}
 		return future;
 	}
 
@@ -747,13 +750,17 @@ public class ScheduleContext<E> implements ScheduleFactory<E>, CompleteHandler<E
 		String s = completeLatch.isSchedul ? "schedul" : "submit";
 		boolean isLastTaskComplete = completeLatch.hasTaskCompleted();
 		boolean hasSubmitCompleted = completeLatch.hasSubmitCompleted();
-		logger.debug(s + "[" + completeLatch.getSchedulTimes() + "], isSubmitFinished："
+		if(logger.isDebugEnabled() || scheduleConfig.logLevel() <= Level.DEBUG.toInt()){
+			logger.info(s + "[" + completeLatch.getSchedulTimes() + "], isSubmitFinished："
 				+ hasSubmitCompleted + ", taskNotCompleted：" + completeLatch.getTaskNotCompleted());
+		}
 
 		if(isLastTaskComplete && hasSubmitCompleted){
 			String time = new SimpleDateFormat("yyyyMMdd HH:mm:ss").format(completeLatch.getSchedulTime());
-			logger.debug(completeLatch.getList().size() +  " tasks of " + s
+			if(logger.isDebugEnabled() || scheduleConfig.logLevel() <= Level.DEBUG.toInt()){
+				logger.info(completeLatch.getList().size() +  " tasks of " + s
 					+ "[" + completeLatch.getSchedulTimes() + "] submitted on " + time  + " completed.");
+			}
 			try{
 				onComplete(completeLatch.getSchedulTimes(), completeLatch.getSchedulTime(), completeLatch.getList());
 			}catch(Exception e){

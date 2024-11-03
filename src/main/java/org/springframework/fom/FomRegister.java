@@ -71,9 +71,9 @@ public class FomRegister implements BeanFactoryAware, ApplicationContextAware {
 		ScheduleConfig config = schedule.getScheduleConfig();
 		if(config.execOnLoad()){
 			schedule.scheduleStart();
-			logger.info("register and start schedule[{}]: {}", scheduleName, config.getConfMap());
+			logger.info("register and start schedule-{}: {}", scheduleName, config.getConfMap());
 		}else{
-			logger.info("register schedule[{}]: {}", scheduleName, config.getConfMap());
+			logger.info("register schedule-{}: {}", scheduleName, config.getConfMap());
 		}
 		return schedule;
 	}
