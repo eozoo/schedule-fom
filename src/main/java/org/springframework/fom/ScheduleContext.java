@@ -518,10 +518,12 @@ public class ScheduleContext<E> implements ScheduleFactory<E>, CompleteHandler<E
 					return;
 				}
 
+				// 防止返回的是不可变的Collection
+				List<Task<E>> taskList = new ArrayList<>(tasks);
 				if(enableTaskConflict){
-					scheduleWithConflict(tasks, completeLatch);
+					scheduleWithConflict(taskList, completeLatch);
 				}else{
-					scheduleWithNoConflict(tasks, completeLatch);
+					scheduleWithNoConflict(taskList, completeLatch);
 				}
 			}finally{
 				completeLatch.submitCompleted();
