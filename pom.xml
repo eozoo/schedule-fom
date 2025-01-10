@@ -3,13 +3,13 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>com.cowave.commons</groupId>
-    <artifactId>spring-fom</artifactId>
-    <version>2.7.2</version>
+    <artifactId>schedule-fom</artifactId>
+    <version>2.7.3</version>
     <packaging>jar</packaging>
 
-    <name>spring-fom</name>
+    <name>schedule-fom</name>
     <description>schedule task</description>
-    <url>https://github.com/cowave5/spring-fom.git</url>
+    <url>https://github.com/cowave5/schedule-fom.git</url>
 
     <licenses>
         <license>
@@ -21,19 +21,19 @@
 
     <issueManagement>
         <system>github</system>
-        <url>https://github.com/cowave5/spring-fom/issues</url>
+        <url>https://github.com/cowave5/schedule-fom/issues</url>
     </issueManagement>
 
     <scm>
-        <url>https://github.com/cowave5/spring-fom</url>
-        <connection>scm:git:https://github.com/cowave5/spring-fom.git</connection>
-        <developerConnection>scm:git:https://github.com/cowave5/spring-fom.git</developerConnection>
+        <url>https://github.com/cowave5/schedule-fom</url>
+        <connection>scm:git:https://github.com/cowave5/schedule-fom.git</connection>
+        <developerConnection>scm:git:https://github.com/cowave5/schedule-fom.git</developerConnection>
     </scm>
 
     <developers>
         <developer>
-            <name>shanhm1991</name>
-            <email>shanhm1991@163.com</email>
+            <name>shanhuiming</name>
+            <email>huiming.shan@cowave.com</email>
         </developer>
     </developers>
 
@@ -59,8 +59,8 @@
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>3.8.1</version>
                 <configuration>
-                    <source>17</source>
-                    <target>17</target>
+                    <source>1.8</source>
+                    <target>1.8</target>
                     <encoding>UTF-8</encoding>
                 </configuration>
             </plugin>
