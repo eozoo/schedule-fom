@@ -161,4 +161,9 @@ public @interface Fom {
 	 * 任务截止时间[ms]
 	 */
 	long deadTime() default ScheduleConfig.DEFAULT_deadTime;
+
+	/**
+	 * 耗时统计区间
+	 */
+	long[] histogram() default {250L, 500L, 1000L, 5000L, 10000L};
 }

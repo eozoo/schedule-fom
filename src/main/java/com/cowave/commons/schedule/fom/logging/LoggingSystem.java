@@ -58,10 +58,10 @@ public abstract class LoggingSystem {
 
 	static {
 		Map<String, String> systems = new LinkedHashMap<>();
-		systems.put("ch.qos.logback.core.Appender", "org.springframework.fom.logging.logback.LogbackLoggingSystem");
-		systems.put("org.apache.logging.log4j.core.impl.Log4jContextFactory", "org.springframework.fom.logging.log4j2.Log4J2LoggingSystem");
-		systems.put("org.apache.log4j.LogManager", "org.springframework.fom.logging.log4j.Log4jLoggingSystem");
-		systems.put("java.util.logging.LogManager", "org.springframework.fom.logging.java.JavaLoggingSystem");
+		systems.put("ch.qos.logback.core.Appender", "com.cowave.commons.schedule.fom.logging.logback.LogbackLoggingSystem");
+		systems.put("org.apache.logging.log4j.core.impl.Log4jContextFactory", "com.cowave.commons.schedule.fom.logging.log4j2.Log4J2LoggingSystem");
+		systems.put("org.apache.log4j.LogManager", "com.cowave.commons.schedule.fom.logging.log4j.Log4jLoggingSystem");
+		systems.put("java.util.logging.LogManager", "com.cowave.commons.schedule.fom.logging.java.JavaLoggingSystem");
 		SYSTEMS = Collections.unmodifiableMap(systems);
 	}
 

@@ -20,11 +20,11 @@ import com.cowave.commons.schedule.fom.logging.LoggingSystem;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationContext;
-import com.cowave.commons.schedule.fom.Result;
+import com.cowave.commons.schedule.fom.FomTaskResult;
 import com.cowave.commons.schedule.fom.ScheduleContext;
 import com.cowave.commons.schedule.fom.ScheduleInfo;
 import com.cowave.commons.schedule.fom.ScheduleStatistics;
-import com.cowave.commons.schedule.fom.Task;
+import com.cowave.commons.schedule.fom.FomTask;
 import com.cowave.commons.schedule.fom.logging.log4j.Log4jLoggingSystem;
 import com.cowave.commons.schedule.fom.support.FomEntity;
 import org.springframework.util.Assert;
@@ -206,16 +206,7 @@ public class FomServiceImpl implements FomService {
 
 	@Override
 	public Map<String, Object> saveStatConf(String scheduleName, String statDay, String statLevel, int saveDay) throws ParseException {
-		ScheduleContext<?> schedule = getScheduleByValidName(scheduleName);
-
-		Map<String, Object> successStat = null;
-		ScheduleStatistics scheduleStatistics = schedule.getScheduleStatistics();
-		if(scheduleStatistics.setLevel(statLevel.split(","))){
-			successStat = schedule.getSuccessStat(statDay);
-		}
-
-		scheduleStatistics.setSaveDay(saveDay);
-		return successStat;
+		return new HashMap<>();
 	}
 
 	@Override
@@ -272,64 +263,65 @@ public class FomServiceImpl implements FomService {
 
 	@Override
 	public String buildExport(@NotBlank(message = "scheduleName cannot be empty.") String scheduleName) {
-		ScheduleContext<?> schedule = getScheduleByValidName(scheduleName);
-
-		ScheduleStatistics scheduleStatistics = schedule.getScheduleStatistics();
-		Map<String, List<Result<?>>> success = scheduleStatistics.copySuccessMap();
-		Map<String, List<Result<?>>> faield = scheduleStatistics.copyFaieldMap();
-
-		TreeSet<String> daySet = new TreeSet<>();
-		daySet.addAll(success.keySet());
-		daySet.addAll(faield.keySet());
-
-		DateFormat dateFormat = new SimpleDateFormat("yyyyMMdd HH:mm:ss SSS");
-		StringBuilder builder = new StringBuilder();
-		for(String day : daySet){
-			List<Result<?>> slist = success.get(day);
-			if(slist != null){
-				builder.append(day).append(" success:").append("\n");
-				for(Result<?> result : slist){
-					builder.append(result.getTaskId()).append(", ");
-					builder.append("submitTime=").append(dateFormat.format(result.getSubmitTime())).append(", ");
-					builder.append("startTime=").append(dateFormat.format(result.getStartTime())).append(", ");
-					builder.append("cost=").append(result.getCostTime()).append("ms, ");
-					builder.append("result=").append(result.getContent()).append("\n");
-				}
-				builder.append("\n");
-			}
-
-			List<Result<?>> flist = faield.get(day);
-			if(flist != null){
-				builder.append(day).append(" failed:").append("\n");
-				for(Result<?> result : flist){
-					builder.append(result.getTaskId()).append(", ");
-					builder.append("submitTime=").append(dateFormat.format(result.getSubmitTime())).append(", ");
-					builder.append("startTime=").append(dateFormat.format(result.getStartTime())).append(", ");
-					builder.append("cost=").append(result.getCostTime()).append("ms, ");
-					Throwable throwable = result.getThrowable();
-					if(throwable == null){
-						builder.append("cause=null").append("\n");
-					}else{
-						Throwable cause = throwable;
-						while((cause = throwable.getCause()) != null){
-							throwable = cause;
-						}
-
-						builder.append("cause=").append(throwable.toString()).append("\n");
-						for(StackTraceElement stack : throwable.getStackTrace()){
-							builder.append(stack).append("\n");
-						}
-					}
-				}
-				builder.append("\n");
-			}
-		}
-		return builder.toString();
+//		ScheduleContext<?> schedule = getScheduleByValidName(scheduleName);
+//
+//		ScheduleStatistics scheduleStatistics = schedule.getScheduleStatistics();
+//		Map<String, List<FomTaskResult<?>>> success = scheduleStatistics.copySuccessMap();
+//		Map<String, List<FomTaskResult<?>>> faield = scheduleStatistics.copyFaieldMap();
+//
+//		TreeSet<String> daySet = new TreeSet<>();
+//		daySet.addAll(success.keySet());
+//		daySet.addAll(faield.keySet());
+//
+//		DateFormat dateFormat = new SimpleDateFormat("yyyyMMdd HH:mm:ss SSS");
+//		StringBuilder builder = new StringBuilder();
+//		for(String day : daySet){
+//			List<FomTaskResult<?>> slist = success.get(day);
+//			if(slist != null){
+//				builder.append(day).append(" success:").append("\n");
+//				for(FomTaskResult<?> fomTaskResult : slist){
+//					builder.append(fomTaskResult.getTaskId()).append(", ");
+//					builder.append("submitTime=").append(dateFormat.format(fomTaskResult.getSubmitTime())).append(", ");
+//					builder.append("startTime=").append(dateFormat.format(fomTaskResult.getStartTime())).append(", ");
+//					builder.append("cost=").append(fomTaskResult.getCostTime()).append("ms, ");
+//					builder.append("result=").append(fomTaskResult.getContent()).append("\n");
+//				}
+//				builder.append("\n");
+//			}
+//
+//			List<FomTaskResult<?>> flist = faield.get(day);
+//			if(flist != null){
+//				builder.append(day).append(" failed:").append("\n");
+//				for(FomTaskResult<?> fomTaskResult : flist){
+//					builder.append(fomTaskResult.getTaskId()).append(", ");
+//					builder.append("submitTime=").append(dateFormat.format(fomTaskResult.getSubmitTime())).append(", ");
+//					builder.append("startTime=").append(dateFormat.format(fomTaskResult.getStartTime())).append(", ");
+//					builder.append("cost=").append(fomTaskResult.getCostTime()).append("ms, ");
+//					Throwable throwable = fomTaskResult.getThrowable();
+//					if(throwable == null){
+//						builder.append("cause=null").append("\n");
+//					}else{
+//						Throwable cause = throwable;
+//						while((cause = throwable.getCause()) != null){
+//							throwable = cause;
+//						}
+//
+//						builder.append("cause=").append(throwable.toString()).append("\n");
+//						for(StackTraceElement stack : throwable.getStackTrace()){
+//							builder.append(stack).append("\n");
+//						}
+//					}
+//				}
+//				builder.append("\n");
+//			}
+//		}
+//		return builder.toString();
+		return "";
 	}
 
 	@Override
 	public void serializeCurrent() {
-		serializeConfig(Task.getCurrentSchedule());
+		serializeConfig(FomTask.getCurrentSchedule());
 	}
 
 	@Override
@@ -339,7 +331,7 @@ public class FomServiceImpl implements FomService {
 
 	@Override
 	public void putCurrentConfig(String key, Object value) {
-		Task.getCurrentSchedule().getScheduleConfig().set(key, value);
+		FomTask.getCurrentSchedule().getScheduleConfig().set(key, value);
 	}
 
 	@Override
@@ -349,7 +341,7 @@ public class FomServiceImpl implements FomService {
 
 	@Override
 	public <V> V getCurrentConfig(String key) {
-		return Task.getCurrentSchedule().getScheduleConfig().get(key);
+		return FomTask.getCurrentSchedule().getScheduleConfig().get(key);
 	}
 
 	@Override

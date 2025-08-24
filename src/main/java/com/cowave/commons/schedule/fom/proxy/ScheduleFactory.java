@@ -2,7 +2,7 @@ package com.cowave.commons.schedule.fom.proxy;
 
 import java.util.Collection;
 
-import com.cowave.commons.schedule.fom.Task;
+import com.cowave.commons.schedule.fom.FomTask;
 
 /**
  *
@@ -16,5 +16,5 @@ public interface ScheduleFactory<E> {
 	 * @return
 	 * @throws Exception
 	 */
-	Collection<? extends Task<E>> newScheduleTasks() throws Exception;
+	Collection<? extends FomTask<E>> newScheduleTasks() throws Exception;
 }

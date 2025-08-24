@@ -7,9 +7,9 @@ import java.util.List;
 
 import org.springframework.cglib.proxy.MethodInterceptor;
 import org.springframework.cglib.proxy.MethodProxy;
-import com.cowave.commons.schedule.fom.Result;
+import com.cowave.commons.schedule.fom.FomTaskResult;
 import com.cowave.commons.schedule.fom.ScheduleContext;
-import com.cowave.commons.schedule.fom.Task;
+import com.cowave.commons.schedule.fom.FomTask;
 import com.cowave.commons.schedule.fom.annotation.Schedule;
 import org.springframework.util.CollectionUtils;
 
@@ -116,9 +116,9 @@ public class ScheduleProxy implements MethodInterceptor {
 			return method.invoke(scheduleContext, args);
 		}
 
-		Collection<Task<?>> tasks = new ArrayList<>();
+		Collection<FomTask<?>> fomTasks = new ArrayList<>();
 		if(scheduleBean == null){
-			tasks.addAll((Collection<Task<?>>)methodProxy.invokeSuper(object, args));
+			fomTasks.addAll((Collection<FomTask<?>>)methodProxy.invokeSuper(object, args));
 			List<Method> methods = new ArrayList<>();
 			for(Method m : scheduleContext.getClass().getMethods()){
 				Schedule scheduled = m.getAnnotation(Schedule.class);
@@ -132,20 +132,20 @@ public class ScheduleProxy implements MethodInterceptor {
 				scheduleName = scheduleName.substring(1);
 			}
 			for(final Method m : methods){
-				Task<Object> task = new Task<Object>(scheduleName + "." + m.getName()) {
+				FomTask<Object> fomTask = new FomTask<Object>(scheduleName + "." + m.getName()) {
 					@Override
 					public Object exec() throws Exception {
 						return m.invoke(scheduleContext);
 					}
 				};
-				tasks.add(task);
+				fomTasks.add(fomTask);
 			}
 		}else{
 			if((ScheduleFactory.class.isAssignableFrom(scheduleBeanClass))){
 				ScheduleFactory scheduleFactory = (ScheduleFactory)scheduleBean;
-				Collection<Task<?>> collection =  (Collection<Task<?>>)scheduleFactory.newScheduleTasks();
+				Collection<FomTask<?>> collection =  (Collection<FomTask<?>>)scheduleFactory.newScheduleTasks();
 				if(!CollectionUtils.isEmpty(collection)){
-					tasks.addAll(collection);
+					fomTasks.addAll(collection);
 				}
 			}
 
@@ -162,23 +162,23 @@ public class ScheduleProxy implements MethodInterceptor {
 				scheduleName = scheduleName.substring(1);
 			}
 			for(final Method m : methods){
-				Task<Object> task = new Task<Object>(scheduleName + "." + m.getName()){
+				FomTask<Object> fomTask = new FomTask<Object>(scheduleName + "." + m.getName()){
 					@Override
 					public Object exec() throws Exception {
 						return m.invoke(scheduleBean);
 					}
 				};
-				tasks.add(task);
+				fomTasks.add(fomTask);
 			}
 		}
-		return tasks;
+		return fomTasks;
 	}
 
 	@SuppressWarnings({ "unchecked", "rawtypes" })
 	private Object handleResult(Object object, Method method, Object[] args, MethodProxy methodProxy) throws Throwable{
 		Class<?>[] parameterTypes = method.getParameterTypes();
 		if(scheduleBean == null || parameterTypes.length != 1
-				|| !Result.class.isAssignableFrom(parameterTypes[0])){
+				|| !FomTaskResult.class.isAssignableFrom(parameterTypes[0])){
 			return method.invoke(scheduleContext, args);
 		}
 
@@ -186,7 +186,7 @@ public class ScheduleProxy implements MethodInterceptor {
 			return null;
 		}
 
-		((ResultHandler)scheduleBean).handleResult((Result)args[0]);
+		((ResultHandler)scheduleBean).handleResult((FomTaskResult)args[0]);
 		return null;
 	}
 

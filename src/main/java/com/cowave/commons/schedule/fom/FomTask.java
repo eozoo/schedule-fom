@@ -13,11 +13,11 @@ import org.slf4j.event.Level;
  * @author shanhm1991@163.com
  *
  */
-public abstract class Task<E> implements Callable<Result<E>> {
+public abstract class FomTask<E> implements Callable<FomTaskResult<E>> {
 
-	protected volatile Logger logger = LoggerFactory.getLogger(Task.class);
+	protected volatile Logger logger = LoggerFactory.getLogger(FomTask.class);
 
-	private static ThreadLocal<ScheduleContext<?>> localSchedule = new ThreadLocal<>();
+	private static final ThreadLocal<ScheduleContext<?>> LOCAL_SCHEDULE = new ThreadLocal<>();
 
 	protected final String id;
 
@@ -33,82 +33,82 @@ public abstract class Task<E> implements Callable<Result<E>> {
 	// 定时线程设置，任务线程读取
 	private volatile ScheduleContext.CompleteLatch<E> completeLatch;
 
-	public Task(){
+	public FomTask(){
 		this.id = this.getClass().getSimpleName();
 	}
 
-	public Task(String id) {
+	public FomTask(String id) {
 		this.id = id;
 	}
 
 	public static ScheduleContext<?> getCurrentSchedule(){
-		return localSchedule.get();
+		return LOCAL_SCHEDULE.get();
 	}
 
 	@Override
-	public final Result<E> call() throws InterruptedException {
-		localSchedule.set(scheduleContext);
+	public final FomTaskResult<E> call() throws InterruptedException {
+		LOCAL_SCHEDULE.set(scheduleContext);
 		if(logger.isDebugEnabled() || (scheduleContext != null && scheduleContext.getScheduleConfig().logLevel() <= Level.DEBUG.toInt())){
 			logger.info("task started.");
 		}
 
 		this.startTime = System.currentTimeMillis();
-		final Result<E> result = new Result<>(id, submitTime, startTime);
-		doCall(result);
-		result.setCostTime(System.currentTimeMillis() - startTime);
+		final FomTaskResult<E> fomTaskResult = new FomTaskResult<>(id, submitTime, startTime);
+		doCall(fomTaskResult);
+		fomTaskResult.setCostTime(System.currentTimeMillis() - startTime);
 
 		if(scheduleContext != null){
 			if(completeLatch != null){
-				completeLatch.addResult(result);
+				completeLatch.addResult(fomTaskResult);
 				scheduleContext.checkComplete(completeLatch);
 			}
-			scheduleContext.record(result);
+			scheduleContext.record(fomTaskResult);
 		}
 
-		if (result.isSuccess()) {
+		if (fomTaskResult.isSuccess()) {
 			if (logger.isDebugEnabled() || (scheduleContext != null && scheduleContext.getScheduleConfig().logLevel() <= Level.INFO.toInt())) {
-				if (result.getContent() != null) {
-					logger.info("{} complete {}ms {}", id, result.getCostTime(), result.getContent());
+				if (fomTaskResult.getContent() != null) {
+					logger.info("{} complete {}ms {}", id, fomTaskResult.getCostTime(), fomTaskResult.getContent());
 				} else {
-					logger.info("{} complete {}ms", id, result.getCostTime());
+					logger.info("{} complete {}ms", id, fomTaskResult.getCostTime());
 				}
 			}
 		} else {
 			Throwable e = null;
-			if(result.getThrowable() != null){
-				Throwable throwable = result.getThrowable();
+			if(fomTaskResult.getThrowable() != null){
+				Throwable throwable = fomTaskResult.getThrowable();
 				Throwable cause;
 				while((cause = throwable.getCause()) != null){
 					throwable = cause;
 				}
 				e = throwable;
 			}
-			if(result.getContent() != null){
-				logger.error("{} failed {}ms {}", id, result.getCostTime(), result.getContent(), e);
+			if(fomTaskResult.getContent() != null){
+				logger.error("{} failed {}ms {}", id, fomTaskResult.getCostTime(), fomTaskResult.getContent(), e);
 			}else{
-				logger.error("{} failed {}ms", id, result.getCostTime(), e);
+				logger.error("{} failed {}ms", id, fomTaskResult.getCostTime(), e);
 			}
 		}
-		return result;
+		return fomTaskResult;
 	}
 
-	private void doCall(Result<E> result){
+	private void doCall(FomTaskResult<E> fomTaskResult){
 		try {
 			if(!beforeExec()){
-				result.setSuccess(false);
+				fomTaskResult.setSuccess(false);
 				return;
 			}
-			result.setContent(exec());
+			fomTaskResult.setContent(exec());
 		} catch(Throwable e) {
-			result.setSuccess(false);
-			result.setThrowable(e);
+			fomTaskResult.setSuccess(false);
+			fomTaskResult.setThrowable(e);
 		} finally{
 			try {
-				afterExec(result.isSuccess(), result.getContent(), result.getThrowable());
+				afterExec(fomTaskResult.isSuccess(), fomTaskResult.getContent(), fomTaskResult.getThrowable());
 			}catch(Throwable e) {
 				logger.error("", e);
 			}
-			localSchedule.remove();
+			LOCAL_SCHEDULE.remove();
 		}
 	}
 
@@ -173,11 +173,11 @@ public abstract class Task<E> implements Callable<Result<E>> {
 	@SuppressWarnings("unchecked")
 	@Override
 	public final boolean equals(Object obj) {
-		if(!(obj instanceof Task)){
+		if(!(obj instanceof FomTask)){
 			return false;
 		}
-		Task<E> task = (Task<E>)obj;
-		return this.id.equals(task.id);
+		FomTask<E> fomTask = (FomTask<E>)obj;
+		return this.id.equals(fomTask.id);
 	}
 
 	@Override

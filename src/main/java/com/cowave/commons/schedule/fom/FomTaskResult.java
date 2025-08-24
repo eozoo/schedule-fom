@@ -9,7 +9,7 @@ package com.cowave.commons.schedule.fom;
  * @author shanhm1991@163.com
  *
  */
-public class Result<E> implements Cloneable{
+public class FomTaskResult<E> implements Cloneable{
 
 	private final String taskId;
 
@@ -25,7 +25,7 @@ public class Result<E> implements Cloneable{
 
 	private Throwable throwable;
 
-	Result(String sourceUri, long submitTime, long startTime) {
+	FomTaskResult(String sourceUri, long submitTime, long startTime) {
 		this.taskId = sourceUri;
 		this.submitTime = submitTime;
 		this.startTime = startTime;
@@ -77,8 +77,8 @@ public class Result<E> implements Cloneable{
 
 	@SuppressWarnings("unchecked")
 	@Override
-	public Result<E> clone() throws CloneNotSupportedException {
-		return (Result<E>)super.clone();
+	public FomTaskResult<E> clone() throws CloneNotSupportedException {
+		return (FomTaskResult<E>)super.clone();
 	}
 
 	@Override

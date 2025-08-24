@@ -104,6 +104,8 @@ public class ScheduleConfig {
 	 */
 	public static final String KEY_deadTime = "deadTime";
 
+	public static final String KET_histogram = "histogram";
+
 	/**
 	 * 加载后默认不立即执行
 	 */
@@ -164,6 +166,8 @@ public class ScheduleConfig {
 	 */
 	public static final long DEFAULT_deadTime = 0;
 
+	public static final Long[] DEFAULT_histogram = {250L, 500L, 1000L, 5000L, 10000L};
+
 	// 内部配置，不允许直接put
 	private static Map<String, Object> internalConf = new TreeMap<>();
 
@@ -186,6 +190,7 @@ public class ScheduleConfig {
 		internalConf.put(KEY_ignoreExecWhenRunning, DEFAULT_ignoreExecWhenRunning);
 		internalConf.put(KEY_initialDelay, DEFAULT_initialDelay);
 		internalConf.put(KEY_deadTime, DEFAULT_deadTime);
+		internalConf.put(KET_histogram, DEFAULT_histogram);
 	}
 
 	private final ConcurrentHashMap<String, Object> confMap = new ConcurrentHashMap<>();
@@ -197,8 +202,10 @@ public class ScheduleConfig {
 		int max = threadMax();
 		int aliveTime = threadAliveTime();
 		int queueSize = queueSize();
-		pool = new TimedExecutorPool(core, max, aliveTime, new LinkedBlockingQueue<Runnable>(queueSize));
+		pool = new TimedExecutorPool(core, max, aliveTime, new LinkedBlockingQueue<>(queueSize));
 		pool.allowCoreThreadTimeOut(true);
+		FomMetricsManager.taskActiveGauge(scheduleName, this);
+		FomMetricsManager.taskWaitingGauge(scheduleName, this);
 	}
 
 	static Map<String, Object> getInternalConf() {
@@ -237,7 +244,7 @@ public class ScheduleConfig {
 		return pool == null ? 0 : pool.getActiveCount();
 	}
 
-	int getWaitings(){
+	int getWaiting(){
 		return pool == null ? 0 : pool.getQueue().size();
 	}
 
@@ -250,7 +257,7 @@ public class ScheduleConfig {
 	}
 
 	@SuppressWarnings("unchecked")
-	Map<Task<?>, Thread> getActiveThreads() {
+	Map<FomTask<?>, Thread> getActiveThreads() {
 		return pool == null ? new HashMap<>() : pool.getActiveThreads();
 	}
 
@@ -487,6 +494,14 @@ public class ScheduleConfig {
 		return true;
 	}
 
+	public void histogram(long[] array){
+		confMap.put(KET_histogram, array);
+	}
+
+	public long[] histogram(){
+		return (long[])confMap.get(KET_histogram);
+	}
+
 	public boolean detectTimeoutOnEachTask(){
 		return MapUtils.getBoolean(confMap, KEY_detectTimeoutOnEachTask, DEFAULT_detectTimeoutOnEachTask);
 	}
@@ -592,14 +607,14 @@ public class ScheduleConfig {
 		}
 
 		DateFormat format = new SimpleDateFormat("yyyyMMdd HH:mm:ss SSS");
-		for(Entry<Task<?>, Thread> entry : pool.getActiveThreads().entrySet()){
-			Task<?> task = entry.getKey();
+		for(Entry<FomTask<?>, Thread> entry : pool.getActiveThreads().entrySet()){
+			FomTask<?> fomTask = entry.getKey();
 			Thread thread = entry.getValue();
 
 			Map<String, String> map = new HashMap<>();
-			map.put("id", task.getTaskId());
-			map.put("submitTime", format.format(task.getSubmitTime()));
-			map.put("startTime", format.format(task.getStartTime()));
+			map.put("id", fomTask.getTaskId());
+			map.put("submitTime", format.format(fomTask.getSubmitTime()));
+			map.put("startTime", format.format(fomTask.getStartTime()));
 
 			StringBuilder builder = new StringBuilder();
 			for(StackTraceElement stack : thread.getStackTrace()){
@@ -680,6 +695,8 @@ public class ScheduleConfig {
 			queueSize(Integer.valueOf(value.toString())); return;
 		case KEY_execOnLoad:
 			execOnLoad(Boolean.valueOf(value.toString())); return;
+		case KET_histogram:
+			histogram((long[])value); return;
 		default:
 			throw new UnsupportedOperationException("config[" + key + "] cannot be change");
 		}

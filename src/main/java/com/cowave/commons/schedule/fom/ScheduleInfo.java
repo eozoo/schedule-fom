@@ -74,12 +74,11 @@ public class ScheduleInfo {
 		this.stateTitile = state.title();
 		this.stateImage = state.src();
 
-		ScheduleStatistics scheduleStatistics = scheduleContext.getScheduleStatistics();
-		this.success = scheduleStatistics.getSuccess();
-		this.failed = scheduleStatistics.getFailed();
+		this.success = 0;
+		this.failed = 0;
 
 		ScheduleConfig scheduleConfig = scheduleContext.getScheduleConfig();
-		this.waiting = scheduleConfig.getWaitings();
+		this.waiting = scheduleConfig.getWaiting();
 		this.active = scheduleConfig.getActives();
 
 		Map<String, Object> configMap = new HashMap<>();

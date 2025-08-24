@@ -40,6 +40,9 @@ public class FomBeanDefinitionRegistrar implements ImportBeanDefinitionRegistrar
 			registry.registerBeanDefinition("fomService", fomService);
 		}
 
+		RootBeanDefinition fomMetricsManager = new RootBeanDefinition(FomMetricsManager.class);
+		registry.registerBeanDefinition("fomMetricsManager", fomMetricsManager);
+
 		// FomBeanPostProcessor
 		RootBeanDefinition fomBeanPostProcessor = new RootBeanDefinition(FomBeanPostProcessor.class);
 		registry.registerBeanDefinition("fomBeanPostProcessor", fomBeanPostProcessor);

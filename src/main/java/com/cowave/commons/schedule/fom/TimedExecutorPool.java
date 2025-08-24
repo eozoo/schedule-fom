@@ -14,7 +14,7 @@ import java.util.concurrent.TimeUnit;
  */
 class TimedExecutorPool extends ThreadPoolExecutor {
 
-	private final Map<Task<?>, Thread> threadMap = new ConcurrentHashMap<>();
+	private final Map<FomTask<?>, Thread> threadMap = new ConcurrentHashMap<>();
 
 	public TimedExecutorPool(int core, int max, long aliveTime, BlockingQueue<Runnable> workQueue) {
 		super(core, max, aliveTime, TimeUnit.MILLISECONDS, workQueue);
@@ -48,14 +48,14 @@ class TimedExecutorPool extends ThreadPoolExecutor {
 
 	@SuppressWarnings("unchecked")
 	private <T> TimedFuture<T> newTaskFor(Callable<T> callable, int timeOut, boolean enableTaskConflict) {
-		if(callable instanceof Task){
-			Task<T> task = (Task<T>)callable;
-			task.setSubmitTime(System.currentTimeMillis());
+		if(callable instanceof FomTask){
+			FomTask<T> fomTask = (FomTask<T>)callable;
+			fomTask.setSubmitTime(System.currentTimeMillis());
 		}
 		return new TimedFuture<>(callable, timeOut, enableTaskConflict);
 	}
 
-	public Map<Task<?>, Thread> getActiveThreads() {
+	public Map<FomTask<?>, Thread> getActiveThreads() {
 		return threadMap;
 	}
 }

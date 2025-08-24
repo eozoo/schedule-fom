@@ -150,6 +150,12 @@
             <version>2.1.1.RELEASE</version>
             <scope>provided</scope>
         </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
+            <version>2.1.1.RELEASE</version>
+            <scope>provided</scope>
+        </dependency>
         <!-- log4j -->
         <dependency>
             <groupId>log4j</groupId>

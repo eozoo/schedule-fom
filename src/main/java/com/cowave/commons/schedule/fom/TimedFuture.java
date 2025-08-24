@@ -11,7 +11,7 @@ import java.util.concurrent.FutureTask;
  */
 class TimedFuture<T> extends FutureTask<T> {
 
-	private final Task<?> task;
+	private final FomTask<?> fomTask;
 
 	private final int timeOut;
 
@@ -21,31 +21,31 @@ class TimedFuture<T> extends FutureTask<T> {
 		super(callable);
 		this.timeOut = timeOut;
 		this.enableTaskConflict = enableTaskConflict;
-		if(callable instanceof Task){
-			task = ((Task<?>)callable);
+		if(callable instanceof FomTask){
+			fomTask = ((FomTask<?>)callable);
 		}else{
-			task = null;
+			fomTask = null;
 		}
 	}
 
 	public long getSubmitTime() {
-		return task.getSubmitTime();
+		return fomTask.getSubmitTime();
 	}
 
 	public long getStartTime() {
-		return task.getStartTime();
+		return fomTask.getStartTime();
 	}
 
 	public String getScheduleName(){
-		return task.getScheduleName();
+		return fomTask.getScheduleName();
 	}
 
 	public String getTaskId() {
-		return task.getTaskId();
+		return fomTask.getTaskId();
 	}
 
-	public Task<?> getTask(){
-		return task;
+	public FomTask<?> getTask(){
+		return fomTask;
 	}
 
 	public int getTimeOut() {

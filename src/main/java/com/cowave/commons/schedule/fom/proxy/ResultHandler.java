@@ -1,6 +1,6 @@
 package com.cowave.commons.schedule.fom.proxy;
 
-import com.cowave.commons.schedule.fom.Result;
+import com.cowave.commons.schedule.fom.FomTaskResult;
 
 /**
  *
@@ -11,8 +11,8 @@ public interface ResultHandler<E> {
 
 	/**
 	 * 任务结果处理
-	 * @param result
+	 * @param fomTaskResult
 	 * @throws Exception
 	 */
-	void handleResult(Result<E> result) throws Exception;
+	void handleResult(FomTaskResult<E> fomTaskResult) throws Exception;
 }

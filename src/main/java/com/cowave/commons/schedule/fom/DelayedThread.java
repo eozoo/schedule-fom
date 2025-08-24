@@ -74,8 +74,8 @@ class DelayedThread extends Thread {
 			}else{
 				long cost = System.currentTimeMillis() - future.getStartTime();
 				if(cost >= overTime){
-					Task task = future.getTask();
-					ScheduleContext scheduleContext = task.getScheduleContext();
+					FomTask fomTask = future.getTask();
+					ScheduleContext scheduleContext = fomTask.getScheduleContext();
 					Logger logger = scheduleContext.getLogger();
 					logger.warn("cancle task[{}] due to time out, cost={}ms", future.getTaskId(), cost);
 					try{
@@ -98,9 +98,9 @@ class DelayedThread extends Thread {
 		List<TimedFuture> futures = delayedTask.getFutureList();
 
 		TimedFuture f1 = futures.get(0);
-		Task task = f1.getTask();
+		FomTask fomTask = f1.getTask();
 		int timeOut = f1.getTimeOut();
-		ScheduleContext scheduleContext = task.getScheduleContext();
+		ScheduleContext scheduleContext = fomTask.getScheduleContext();
 		Logger logger = scheduleContext.getLogger();
 
 		Iterator<TimedFuture> it = futures.iterator();
@@ -135,11 +135,11 @@ class DelayedThread extends Thread {
 
 	@SuppressWarnings("rawtypes")
 	private void cancleTask(TimedFuture future, long costTime, Logger logger) {
-		Task<?> task = future.getTask();
-		if(costTime > 0  && TaskCancelHandler.class.isAssignableFrom(task.getClass())){
-			TaskCancelHandler handler = (TaskCancelHandler)task;
+		FomTask<?> fomTask = future.getTask();
+		if(costTime > 0  && TaskCancelHandler.class.isAssignableFrom(fomTask.getClass())){
+			TaskCancelHandler handler = (TaskCancelHandler) fomTask;
 			try {
-				handler.handleCancel(task.getTaskId(), costTime);
+				handler.handleCancel(fomTask.getTaskId(), costTime);
 			} catch (Exception e) {
 				logger.error("", e);
 			}

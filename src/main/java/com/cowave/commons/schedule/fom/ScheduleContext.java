@@ -46,10 +46,10 @@ import org.springframework.util.ReflectionUtils;
 public class ScheduleContext<E> implements ScheduleFactory<E>, CompleteHandler<E>, ResultHandler<E>, TerminateHandler, TaskCancelHandler, ApplicationContextAware {
 
 	// 所有schedule共用，以便根据id检测任务冲突
-	private static final Map<String,TimedFuture<Result<?>>> submitMap = new HashMap<>(512);
+	private static final Map<String,TimedFuture<FomTaskResult<?>>> submitMap = new HashMap<>(512);
 
 	// 当前提交的任务Future
-	private final List<TimedFuture<Result<E>>> submitFutures = new ArrayList<>();
+	private final List<TimedFuture<FomTaskResult<E>>> submitFutures = new ArrayList<>();
 
 	private final ScheduleConfig scheduleConfig = new ScheduleConfig();
 
@@ -176,11 +176,11 @@ public class ScheduleContext<E> implements ScheduleFactory<E>, CompleteHandler<E
 
 	@SuppressWarnings("unchecked")
 	@Override
-	public void onComplete(long execTimes, long lastExecTime, List<Result<E>> results) throws Exception {
+	public void onComplete(long execTimes, long lastExecTime, List<FomTaskResult<E>> fomTaskResults) throws Exception {
 		ScheduleContext<E> scheduleContext;
 		if(applicationContext != null && scheduleBeanName != null
 				&& (scheduleContext = (ScheduleContext<E>)applicationContext.getBean(scheduleName)) != null){
-			scheduleContext.onComplete(execTimes, lastExecTime, results);
+			scheduleContext.onComplete(execTimes, lastExecTime, fomTaskResults);
 		}
 	}
 
@@ -196,7 +196,7 @@ public class ScheduleContext<E> implements ScheduleFactory<E>, CompleteHandler<E
 
 	@SuppressWarnings("unchecked")
 	@Override
-	public Collection<? extends Task<E>> newScheduleTasks() throws Exception {
+	public Collection<? extends FomTask<E>> newScheduleTasks() throws Exception {
 		ScheduleContext<E> scheduleContext;
 		if(applicationContext != null
 				&& (scheduleContext = (ScheduleContext<E>)applicationContext.getBean(scheduleName)) != null
@@ -204,16 +204,16 @@ public class ScheduleContext<E> implements ScheduleFactory<E>, CompleteHandler<E
 			return scheduleContext.newScheduleTasks();
 		}
 
-		Task<E> task = schedul();
-		if(task != null){
-			List<Task<E>> list = new ArrayList<>();
-			list.add(task);
+		FomTask<E> fomTask = schedul();
+		if(fomTask != null){
+			List<FomTask<E>> list = new ArrayList<>();
+			list.add(fomTask);
 			return list;
 		}
 		return new ArrayList<>();
 	}
 
-	public Task<E> schedul() throws Exception {
+	public FomTask<E> schedul() throws Exception {
 		return null;
 	}
 
@@ -428,7 +428,7 @@ public class ScheduleContext<E> implements ScheduleFactory<E>, CompleteHandler<E
 					cleanCompletedFutures();
 				}else if(!detectTimeoutOnEachTask){ // 对整体任务算超时
 					if(!completeLatch.waitTaskCompleted(overTime)){
-						for(TimedFuture<Result<E>> future : submitFutures){
+						for(TimedFuture<FomTaskResult<E>> future : submitFutures){
 							if(!future.isDone()){
 								long startTime = future.getStartTime();
 								long cost = 0;
@@ -458,7 +458,7 @@ public class ScheduleContext<E> implements ScheduleFactory<E>, CompleteHandler<E
 						cleanCompletedFutures();
 					}else{
 						DelayQueue<DelayedSingleTask> delayQueue  = new DelayQueue<>();
-						for(TimedFuture<Result<E>> future : submitFutures){
+						for(TimedFuture<FomTaskResult<E>> future : submitFutures){
 							waitTaskFuture(future, delayQueue, overTime);
 						}
 
@@ -480,7 +480,7 @@ public class ScheduleContext<E> implements ScheduleFactory<E>, CompleteHandler<E
 			}
 		}
 
-		private void waitTaskFuture(TimedFuture<Result<E>> future, DelayQueue<DelayedSingleTask> delayQueue, int overTime){
+		private void waitTaskFuture(TimedFuture<FomTaskResult<E>> future, DelayQueue<DelayedSingleTask> delayQueue, int overTime){
 			if(!future.isDone()) {
 				long startTime = future.getStartTime();
 				if(startTime == 0){ // startTime = 0 表示任务还没启动
@@ -508,22 +508,23 @@ public class ScheduleContext<E> implements ScheduleFactory<E>, CompleteHandler<E
 			switchState(RUNNING);
 
 			scheduleTimes.incrementAndGet();
+			FomMetricsManager.scheduleTimesIncrement(scheduleName);
 
 			lastTime = System.currentTimeMillis();
 
 			CompleteLatch<E> completeLatch = new CompleteLatch<>(true, scheduleTimes.get(), lastTime);
 			try{
-				Collection<? extends Task<E>> tasks = newScheduleTasks();
+				Collection<? extends FomTask<E>> tasks = newScheduleTasks();
 				if(tasks == null || tasks.isEmpty()){
 					return;
 				}
 
 				// 防止返回的是不可变的Collection
-				List<Task<E>> taskList = new ArrayList<>(tasks);
+				List<FomTask<E>> fomTaskList = new ArrayList<>(tasks);
 				if(enableTaskConflict){
-					scheduleWithConflict(taskList, completeLatch);
+					scheduleWithConflict(fomTaskList, completeLatch);
 				}else{
-					scheduleWithNoConflict(taskList, completeLatch);
+					scheduleWithNoConflict(fomTaskList, completeLatch);
 				}
 			}finally{
 				completeLatch.submitCompleted();
@@ -533,21 +534,21 @@ public class ScheduleContext<E> implements ScheduleFactory<E>, CompleteHandler<E
 		}
 
 		@SuppressWarnings({ "rawtypes", "unchecked" })
-		private void scheduleWithConflict(Collection<? extends Task<E>> tasks, CompleteLatch<E> completeLatch){
+		private void scheduleWithConflict(Collection<? extends FomTask<E>> tasks, CompleteLatch<E> completeLatch){
 			synchronized(submitMap){
-				Iterator<? extends Task<E>> it = tasks.iterator();
+				Iterator<? extends FomTask<E>> it = tasks.iterator();
 				String taskId = null;
 				try{
 					while(it.hasNext()){
-						Task<E> task = it.next();
-						taskId = task.getTaskId();
+						FomTask<E> fomTask = it.next();
+						taskId = fomTask.getTaskId();
 						if (isTaskAlive(taskId)) {
 							logger.warn("task[{}] is still alive, create canceled.", taskId);
 							continue;
 						}
 
-						task.setCompleteLatch(completeLatch);
-						TimedFuture future = (TimedFuture)submit(task);
+						fomTask.setCompleteLatch(completeLatch);
+						TimedFuture future = (TimedFuture)submit(fomTask);
 
 						it.remove();
 						submitMap.put(taskId, future);
@@ -560,15 +561,15 @@ public class ScheduleContext<E> implements ScheduleFactory<E>, CompleteHandler<E
 		}
 
 		@SuppressWarnings({ "rawtypes", "unchecked" })
-		private void scheduleWithNoConflict(Collection<? extends Task<E>> tasks, CompleteLatch<E> completeLatch){
-			Iterator<? extends Task<E>> it = tasks.iterator();
+		private void scheduleWithNoConflict(Collection<? extends FomTask<E>> tasks, CompleteLatch<E> completeLatch){
+			Iterator<? extends FomTask<E>> it = tasks.iterator();
 			String taskId = null;
 			try{
 				while(it.hasNext()){
-					Task<E> task = it.next();
-					taskId = task.getTaskId();
-					task.setCompleteLatch(completeLatch);
-					TimedFuture future = (TimedFuture)submit(task);
+					FomTask<E> fomTask = it.next();
+					taskId = fomTask.getTaskId();
+					fomTask.setCompleteLatch(completeLatch);
+					TimedFuture future = (TimedFuture)submit(fomTask);
 
 					it.remove();
 					submitFutures.add(future);
@@ -602,7 +603,7 @@ public class ScheduleContext<E> implements ScheduleFactory<E>, CompleteHandler<E
 							isStopping = true;
 
 							// 不支持中断的任务，可能自定义了手动取消操作
-							for(TimedFuture<Result<E>> future : submitFutures) {
+							for(TimedFuture<FomTaskResult<E>> future : submitFutures) {
 								long startTime = future.getStartTime();
 								if(!future.isDone() && startTime > 0){
 									long cost = System.currentTimeMillis() - future.getStartTime();
@@ -634,12 +635,12 @@ public class ScheduleContext<E> implements ScheduleFactory<E>, CompleteHandler<E
 			}
 		}
 
-		private void cancleTask(TimedFuture<Result<E>> future, long costTime) {
-			Task<?> task = future.getTask();
-			if(costTime > 0  && TaskCancelHandler.class.isAssignableFrom(task.getClass())){
-				TaskCancelHandler handler = (TaskCancelHandler)task;
+		private void cancleTask(TimedFuture<FomTaskResult<E>> future, long costTime) {
+			FomTask<?> fomTask = future.getTask();
+			if(costTime > 0  && TaskCancelHandler.class.isAssignableFrom(fomTask.getClass())){
+				TaskCancelHandler handler = (TaskCancelHandler) fomTask;
 				try {
-					handler.handleCancel(task.getTaskId(), costTime);
+					handler.handleCancel(fomTask.getTaskId(), costTime);
 				} catch (Exception e) {
 					logger.error("", e);
 				}
@@ -649,16 +650,16 @@ public class ScheduleContext<E> implements ScheduleFactory<E>, CompleteHandler<E
 
 	}
 
-	public Future<Result<E>> submit(Task<E> task) {
-		task.setScheduleContext(ScheduleContext.this);
+	public Future<FomTaskResult<E>> submit(FomTask<E> fomTask) {
+		fomTask.setScheduleContext(ScheduleContext.this);
 
-		TimedFuture<Result<E>> future =
-				scheduleConfig.getPool().submit(task, scheduleConfig.taskOverTime(), scheduleConfig.enableTaskConflict());
-		if(task.getCompleteLatch() != null){
-			task.getCompleteLatch().increaseTaskNotCompleted();
+		TimedFuture<FomTaskResult<E>> future =
+				scheduleConfig.getPool().submit(fomTask, scheduleConfig.taskOverTime(), scheduleConfig.enableTaskConflict());
+		if(fomTask.getCompleteLatch() != null){
+			fomTask.getCompleteLatch().increaseTaskNotCompleted();
 		}
 		if(logger.isDebugEnabled() || scheduleConfig.logLevel() <= Level.DEBUG.toInt()){
-			logger.info("task[{}] submitted.", task.getTaskId());
+			logger.info("task[{}] submitted.", fomTask.getTaskId());
 		}
 		return future;
 	}
@@ -669,7 +670,7 @@ public class ScheduleContext<E> implements ScheduleFactory<E>, CompleteHandler<E
 	 * @return
 	 */
 	@SuppressWarnings("rawtypes")
-	public void submitBatch(Collection<? extends Task<E>> tasks) {
+	public void submitBatch(Collection<? extends FomTask<E>> tasks) {
 		if(CollectionUtils.isEmpty(tasks)){
 			throw new IllegalArgumentException("submit tasks cannot be empty.");
 		}
@@ -694,22 +695,22 @@ public class ScheduleContext<E> implements ScheduleFactory<E>, CompleteHandler<E
 	}
 
 	@SuppressWarnings({ "rawtypes", "unchecked" })
-	private List<TimedFuture> submitWithConflict(Collection<? extends Task<E>> tasks, CompleteLatch<E> completeLatch){
+	private List<TimedFuture> submitWithConflict(Collection<? extends FomTask<E>> tasks, CompleteLatch<E> completeLatch){
 		List<TimedFuture> futureList = new ArrayList<>(tasks.size());
 		synchronized(submitMap){
-			Iterator<? extends Task<E>> it = tasks.iterator();
+			Iterator<? extends FomTask<E>> it = tasks.iterator();
 			String taskId = null;
 			try{
 				while(it.hasNext()){
-					Task<E> task = it.next();
-					taskId = task.getTaskId();
+					FomTask<E> fomTask = it.next();
+					taskId = fomTask.getTaskId();
 					if (isTaskAlive(taskId)) {
 						logger.warn("task[{}] is still alive, create canceled.", taskId);
 						continue;
 					}
 
-					task.setCompleteLatch(completeLatch);
-					TimedFuture future = (TimedFuture)submit(task);
+					fomTask.setCompleteLatch(completeLatch);
+					TimedFuture future = (TimedFuture)submit(fomTask);
 
 					it.remove();
 					submitMap.put(taskId, future);
@@ -723,17 +724,17 @@ public class ScheduleContext<E> implements ScheduleFactory<E>, CompleteHandler<E
 	}
 
 	@SuppressWarnings({ "rawtypes", "unchecked" })
-	private List<TimedFuture> submitWithNoConflict(Collection<? extends Task<E>> tasks, CompleteLatch<E> completeLatch){
+	private List<TimedFuture> submitWithNoConflict(Collection<? extends FomTask<E>> tasks, CompleteLatch<E> completeLatch){
 		List<TimedFuture> futureList = new ArrayList<>(tasks.size());
-		Iterator<? extends Task<E>> it = tasks.iterator();
+		Iterator<? extends FomTask<E>> it = tasks.iterator();
 		String taskId = null;
 		try{
 			while(it.hasNext()){
-				Task<E> task = it.next();
-				taskId = task.getTaskId();
-				task.setCompleteLatch(completeLatch);
+				FomTask<E> fomTask = it.next();
+				taskId = fomTask.getTaskId();
+				fomTask.setCompleteLatch(completeLatch);
 
-				TimedFuture<Result<E>> future = (TimedFuture)submit(task);
+				TimedFuture<FomTaskResult<E>> future = (TimedFuture)submit(fomTask);
 				futureList.add(future);
 				it.remove();
 			}
@@ -744,7 +745,7 @@ public class ScheduleContext<E> implements ScheduleFactory<E>, CompleteHandler<E
 	}
 
 	private boolean isTaskAlive(String taskId){
-		Future<Result<?>> future = submitMap.get(taskId);
+		Future<FomTaskResult<?>> future = submitMap.get(taskId);
 		return future != null && !future.isDone();
 	}
 
@@ -777,9 +778,9 @@ public class ScheduleContext<E> implements ScheduleFactory<E>, CompleteHandler<E
 	private void cleanCompletedFutures() {
 		if(enableTaskConflict){
 			synchronized(submitMap) {
-				for(TimedFuture<Result<E>> currentFuture : submitFutures){
+				for(TimedFuture<FomTaskResult<E>> currentFuture : submitFutures){
 					String taskId = currentFuture.getTaskId();
-					TimedFuture<Result<?>> future = submitMap.get(taskId);
+					TimedFuture<FomTaskResult<?>> future = submitMap.get(taskId);
 					if(future != null && future.isDone()){
 						submitMap.remove(taskId);
 					}
@@ -791,7 +792,7 @@ public class ScheduleContext<E> implements ScheduleFactory<E>, CompleteHandler<E
 
 	static void cleanCompletedFutures(String taskId) {
 		synchronized(submitMap) {
-			TimedFuture<Result<?>> future = submitMap.get(taskId);
+			TimedFuture<FomTaskResult<?>> future = submitMap.get(taskId);
 			if(future != null && future.isDone()){
 				submitMap.remove(taskId);
 			}
@@ -806,7 +807,7 @@ public class ScheduleContext<E> implements ScheduleFactory<E>, CompleteHandler<E
 
 		private final long schedulTime;
 
-		private final List<Result<E>> list = new ArrayList<>();
+		private final List<FomTaskResult<E>> list = new ArrayList<>();
 
 		// 任务是否全部提交结束
 		private volatile boolean hasSubmitCompleted = false;
@@ -855,11 +856,11 @@ public class ScheduleContext<E> implements ScheduleFactory<E>, CompleteHandler<E
 			return schedulTime;
 		}
 
-		public synchronized void addResult(Result<E> result){
-			list.add(result);
+		public synchronized void addResult(FomTaskResult<E> fomTaskResult){
+			list.add(fomTaskResult);
 		}
 
-		public synchronized List<Result<E>> getList() {
+		public synchronized List<FomTaskResult<E>> getList() {
 			return list;
 		}
 
@@ -885,14 +886,14 @@ public class ScheduleContext<E> implements ScheduleFactory<E>, CompleteHandler<E
 	}
 
 	public Map<String, Object> getSuccessStat(String statDay) throws ParseException {
-		return scheduleStatistics.getSuccessStat(statDay);
+		return new HashMap<>();
 	}
 
 	public List<Map<String, String>> getFailedStat() {
-		return scheduleStatistics.getFailedStat();
+		return new ArrayList<>();
 	}
 
-	public void saveConfig(HashMap<String, Object> map, boolean valueEnvirment) throws NumberFormatException, IllegalArgumentException, IllegalAccessException{
+	public void saveConfig(HashMap<String, Object> map, boolean valueEnvirment) throws IllegalArgumentException, IllegalAccessException{
 		Set<Field> envirmentChange = scheduleConfig.saveConfig(map);
 		if(!valueEnvirment || envirmentChange.isEmpty()){
 			return;
@@ -900,10 +901,10 @@ public class ScheduleContext<E> implements ScheduleFactory<E>, CompleteHandler<E
 		valueEnvirmentField(envirmentChange);
 	}
 
-	protected void record(Result<E> result){
-		scheduleStatistics.record(scheduleBeanName, result);
+	protected void record(FomTaskResult<E> fomTaskResult){
+		scheduleStatistics.record(scheduleBeanName, fomTaskResult, scheduleConfig.histogram());
 		try{
-			handleResult(result);
+			handleResult(fomTaskResult);
 		}catch(Exception e){
 			logger.error("", e);
 		}
@@ -911,11 +912,11 @@ public class ScheduleContext<E> implements ScheduleFactory<E>, CompleteHandler<E
 
 	@SuppressWarnings("unchecked")
 	@Override
-	public void handleResult(Result<E> result) {
+	public void handleResult(FomTaskResult<E> fomTaskResult) {
 		ScheduleContext<E> scheduleContext;
 		if(applicationContext != null && scheduleBeanName != null
 				&& (scheduleContext = (ScheduleContext<E>)applicationContext.getBean(scheduleName)) != null){
-			scheduleContext.handleResult(result);
+			scheduleContext.handleResult(fomTaskResult);
 		}
 	}
 

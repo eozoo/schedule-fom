@@ -223,6 +223,9 @@ public class FomBeanPostProcessor implements BeanPostProcessor, BeanFactoryAware
 
 		fom.level().toInt();
 
+		long[] histogram = fom.histogram();
+		scheduleConfig.histogram(histogram);
+
 		String threadCoreString = fom.threadCoreString();
 		if(StringUtils.hasText(threadCoreString)){
 			threadCoreString = valueResolver.resolveStringValue(threadCoreString);

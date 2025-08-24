@@ -108,8 +108,8 @@ table tr .onlyRead {
 							<th>schedule times</th>
 							<th>last time</th>
 							<th>next time</th>
-							<th>success</th>
-							<th>failed</th>
+<!--							<th>success</th>-->
+<!--							<th>failed</th>-->
 							<th>waiting</th>
 							<th>active</th>
 							<th>state</th>
@@ -127,15 +127,15 @@ var root = window.document.location.pathname
 root = root.substring(0, root.substr(1).indexOf('/') + 1 );
 
 var table;
-$(document).ready(function(){		
+$(document).ready(function(){
 table = $("#fom").DataTable({
 			ajax: {
 	            url: root + "/fom/schedule/list",
 	            dataSrc: 'data.list'
-	        }, 
+	        },
 	        "aLengthMenu" : [
 				[ 15, 30, 50, 100 ],
-				[ 15, 30, 50, 100 ] 
+				[ 15, 30, 50, 100 ]
 			],
 			"columns" : [
 				{
@@ -146,76 +146,76 @@ table = $("#fom").DataTable({
 				},
 				{
 					"data" : "scheduleName"
-					/* , 
+					/* ,
 					"render": function (data, type, row, meta){
 						$(this).attr('style', 'text-align: left;'); */
-						//$('td:eq(1)', row).attr('style', 'text-align: left;').html(data.scheduleName);  
-					//} 
+						//$('td:eq(1)', row).attr('style', 'text-align: left;').html(data.scheduleName);
+					//}
 				},
 				{
-					"data" : "loadTime" 
+					"data" : "loadTime"
 				},
 				{
-					"data" : "scheduleTimes" 
+					"data" : "scheduleTimes"
 				},
 				{
-					"data" : "lastTime" 
+					"data" : "lastTime"
 				},
 				{
-					"data" : "nextTime" 
+					"data" : "nextTime"
 				},
+				// {
+				// 	"data" : "success",
+				// 	"render": function (data, type, row, meta){
+				// 		 if(data > 0){
+				// 			return "<a style='color:#1494CF; 'schedule='" + row.scheduleName
+				// 			     + "' onclick='successTasks(this)' href='#'>" + data + "</a>";
+				// 		 }else{
+				// 			return "0";
+				// 		}
+				// 	}
+				// },
+				// {
+				// 	"data" : "failed",
+				// 	"render": function (data, type, row, meta){
+				// 		 if(data > 0){
+				// 			return "<a style='color:#F99116; 'schedule='" + row.scheduleName
+				// 			     + "' onclick='failedTasks(this)' href='#'>" + data + "</a>";
+				// 		 }else{
+				// 			return "0";
+				// 		}
+				// 	}
+				// },
 				{
-					"data" : "success", 
+					"data" : "waiting",
 					"render": function (data, type, row, meta){
-						 if(data > 0){  
-							return "<a style='color:#1494CF; 'schedule='" + row.scheduleName  
-							     + "' onclick='successTasks(this)' href='#'>" + data + "</a>";
-						 }else{
-							return "0";
-						}  
-					}
-				},
-				{
-					"data" : "failed", 
-					"render": function (data, type, row, meta){
-						 if(data > 0){  
-							return "<a style='color:#F99116; 'schedule='" + row.scheduleName 
-							     + "' onclick='failedTasks(this)' href='#'>" + data + "</a>";
-						 }else{
-							return "0";
-						}  
-					} 
-				},
-				{
-					"data" : "waiting", 
-					"render": function (data, type, row, meta){
-						  if(data > 0){   
-							return "<a style='color:#F04518; 'schedule='" + row.scheduleName 
+						  if(data > 0){
+							return "<a style='color:#F04518; 'schedule='" + row.scheduleName
 							     + "' onclick='waitingTasks(this)' href='#'>" + data + "</a>";
 					 	 }else{
 							return "0";
-						}  
-					}  
+						}
+					}
 				},
 				{
-					"data" : "active", 
+					"data" : "active",
 					"render": function (data, type, row, meta){
-						 if(data > 0){  
-							return "<a style='color:#00D737; 'schedule='" + row.scheduleName 
+						 if(data > 0){
+							return "<a style='color:#00D737; 'schedule='" + row.scheduleName
 							     + "' onclick='activeTasks(this)' href='#'>" + data + "</a>";
 						 }else{
 							return "0";
-						} 
-					}  
+						}
+					}
 				},
 				{
-					"data" : "state", 
+					"data" : "state",
 					"render": function (data, type, row, meta){
 						return "<img src='" + row.stateImage + "' title='" + row.stateTitile + "'>";
 					}
 				},
 				{
-					"data" : "loggerLevel", 
+					"data" : "loggerLevel",
 					"render": function (data, type, row, meta){
 						return initLogLevel(row.scheduleName, row.loggerLevel);
 					}
@@ -233,9 +233,9 @@ table = $("#fom").DataTable({
 			"createdRow" : function(row, data, index) {
 				$('td', row).eq(1).css("text-align", "left");
 			}
-		
+
 		});
-		
+
     $('#fom tbody').on('click', 'td.details-control', function() {
     	var tr = $(this).closest('tr');
 		var row = table.row(tr);
@@ -250,7 +250,7 @@ table = $("#fom").DataTable({
 		}
 	});
 });
-	
+
 	function initLogLevel(scheduleName, level){
 		var select = "<select schedule='" + scheduleName + "' onchange='changeLogLevel(this)' >";
 		var arr = ['DEBUG', 'INFO', 'WARN', 'ERROR'];
@@ -264,7 +264,7 @@ table = $("#fom").DataTable({
 		select += "</select>";
 		return select;
 	}
-	
+
 	function changeLogLevel(e){
 		var levelName = $(e).val();
 		var scheduleName = $(e).attr("schedule");
@@ -276,41 +276,41 @@ table = $("#fom").DataTable({
 				"levelName" : levelName,
 				"scheduleName" : scheduleName
 			}
-		}); 
+		});
 	}
-	
+
 	function format(data) {
 		var Tb = $('<table schedule="' + data.scheduleName + '" cellpadding="5" cellspacing="0" border="0" style="padding-left:50px; width:100%; text-align:left;" />');
 		var row1 = $('<tr><td style="width:10%;"><i class="layui-icon layui-icon-ok detailbtn" title="save" onclick="save(this)"/></i></td>'
 			       + '<td style="width:90%;"><i class="layui-icon layui-icon-edit detailbtn" title="edit" onclick="edit(this)"/></i></td></tr>');
 		Tb.append(row1);
-		
+
 		var config = data.config;
-		$.each(config, function(i, item){  
+		$.each(config, function(i, item){
 			var Tr = $('<tr><td>' + item.key + '</td></tr>');
-			
+
 			var input = $('<input disabled="disabled" style="width:100%; padding:2px;"/>');
 			if(item.onlyRead){
 				$(Tr).attr("title", item.key + " is readOnly").addClass("readOnly");
 			}
-			
+
 			$(input).attr("oldValue", item.value);
 			input.val(item.value);
-			
+
 			var Td = $('<td/>');
 			Td.append(input);
 			Tr.append(Td);
 			Tb.append(Tr);
-        
-		}); 
+
+		});
 		return Tb;
 	}
-	
+
 	function edit(e) {
 		var Tb = $(e).parent().parent().parent();
 		Tb.find("tr").not(".readOnly").find("input").attr("disabled", false);
 	}
-	
+
 	function save(e) {
 		var Tb = $(e).parent().parent().parent();
 		var disabled = Tb.find("input").attr("disabled");
@@ -319,15 +319,15 @@ table = $("#fom").DataTable({
 		}
 
 		Tb.find("input").attr("disabled", true);
-		
+
 		var json = '{';
 		Tb.find("tr").each(function(i) {
 			if (i == 0) {
 				return;
 			}
-			
+
 			var key = $(this).find("td").eq(0).html();
-			
+
 			var input = $(this).find("input");
 			var value = $(input).val();
 			var oldValue = $(input).attr("oldValue");
@@ -339,7 +339,7 @@ table = $("#fom").DataTable({
 		if(json == '}'){
 			return;
 		}
-		
+
 		var scheduleName = Tb.attr("schedule");
 		$.ajax({
 			url : root + "/fom/schedule/config/save",
@@ -359,7 +359,7 @@ table = $("#fom").DataTable({
 			}
 		});
 	}
-	
+
 	function scheduleStart(e) {
 		var scheduleName = $(e).attr("schedule");
 		$.ajax({
@@ -384,7 +384,7 @@ table = $("#fom").DataTable({
 				}
 			});
 	}
-	
+
 	function scheduleStop(e) {
 		var scheduleName = $(e).attr("schedule");
 		$.ajax({
@@ -409,7 +409,7 @@ table = $("#fom").DataTable({
 				}
 			});
 	}
-	
+
 	function scheduleExec(e) {
 		var scheduleName = $(e).attr("schedule");
 		$.ajax({
@@ -434,7 +434,7 @@ table = $("#fom").DataTable({
 				}
 			});
 	}
-	
+
 	function waitingTasks(e) {
 		var scheduleName = $(e).attr("schedule");
 		$.ajax({
@@ -448,21 +448,21 @@ table = $("#fom").DataTable({
 					if (data.code != 200) {
 						return;
 					}
-					
+
 					var data = data.data;
 					if (data == "{}") {
 						return;
 					}
-					
+
 					var html = "<table class='detailTb' width='100%' border='1' style='margin=10px;'>"
 					         + "<thead><tr><th>id</th><th>submit time</th></tr></thead>";
-					var count = 0;         
+					var count = 0;
 					for (var key in data) {
 						html += "<tr style='line-height:22px;height:22px;'><td><div>" + key + "</div></td><td><div>" + data[key] + "</div></td></tr>"
 						count++;
 					}
 					html += "</table>";
-					
+
 					layer.open({
 						title : 'submit time of waiting tasks[ ' + count + ' ]',
 						type : 1,
@@ -476,9 +476,9 @@ table = $("#fom").DataTable({
 				error : function(XMLHttpRequest, textStatus, errorThrown) {
 					layer.msg(XMLHttpRequest.responseText);
 				}
-			}); 
+			});
 	}
-	
+
 	function activeTasks(e) {
 		var scheduleName = $(e).attr("schedule");
 		$.ajax({
@@ -492,17 +492,17 @@ table = $("#fom").DataTable({
 				if (data.code != 200) {
 					return;
 				}
-				
+
 				var html = "<table class='detailTb' width='100%' border='1' style='margin=10px;'>"
 				         + "<thead><tr><th>id</th><th>submit Time</th><th>start Time</th><th>Thread Stack</th></tr></thead>";
 				var list = data.data;
 				var count = 0;
-				$.each(list, function(i, item){  
+				$.each(list, function(i, item){
 					count++;
 					html += "<tr style='line-height:22px;height:22px;'><td>" + item.id + "</td><td>" + item.submitTime + "</td><td>" + item.startTime + "</td><td>" + item.stack + "</td></tr>"
-	            });  
+	            });
 				html += "</table>";
-				
+
 				layer.open({
 					title : 'Thread stack of active tasks[ ' + count + ' ]',
 					type : 1,
@@ -518,7 +518,7 @@ table = $("#fom").DataTable({
 			}
 		});
 	}
-	
+
 	function failedTasks(e){
 		var scheduleName = $(e).attr("schedule");
 		$.ajax({
@@ -532,22 +532,22 @@ table = $("#fom").DataTable({
 				if (data.code != 200) {
 					return;
 				}
-				
+
 				var html = "<table class='detailTb' width='100%' border='1' style='margin=10px;'>";
 				html += "<thead><tr><th>id</th><th>submit Time</th><th>start Time</th><th>cost Time</th><th>cause</th></tr></thead>";
 				var list = data.data;
 				var count = 0;
-				$.each(list, function(i, item){  
+				$.each(list, function(i, item){
 					count++;
-					html += "<tr style='line-height:22px;height:22px;'>" 
-					      + "<td>" + item.id + "</td>" 
-					      + "<td>" + item.submitTime + "</td>" 
-					      + "<td>" + item.startTime + "</td>" 
-					      + "<td>" + item.costTime + "</td>" 
+					html += "<tr style='line-height:22px;height:22px;'>"
+					      + "<td>" + item.id + "</td>"
+					      + "<td>" + item.submitTime + "</td>"
+					      + "<td>" + item.startTime + "</td>"
+					      + "<td>" + item.costTime + "</td>"
 					      + "<td>" + item.cause + "</td></tr>"
-	            });  
+	            });
 				html += "</table>";
-				
+
 				layer.open({
 					title : 'Throwable of failed tasks[ ' + count + ' ]',
 					type : 1,
@@ -564,7 +564,7 @@ table = $("#fom").DataTable({
 			}
 		});
 	}
-	
+
 	function successTasks(e) {
 		var scheduleName = $(e).attr("schedule");
 		$.ajax({
@@ -578,7 +578,7 @@ table = $("#fom").DataTable({
 					if(data.code != 200){
 						return;
 					}
-					
+
 					var data = data.data;
 					var html = '<div>'
 						     + '<div style="width:90%; float:left; margin-left:50px;">'
@@ -608,7 +608,7 @@ table = $("#fom").DataTable({
 
 					$("#saveDay").val(data.saveday);
 					$("#statLevel").val(data.lv1 + "," + data.lv2 + "," + data.lv3 + "," + data.lv4 + "," + data.lv5);
-					
+
 					layui.laydate.render({
 						elem : '#statDay',
 						format : 'yyyy/MM/dd',
@@ -638,7 +638,7 @@ table = $("#fom").DataTable({
 							});
 						}
 					});
-					
+
 					refreshHighchartsAll(data);
 					refreshHighchartsDay(data);
 				},
@@ -647,13 +647,13 @@ table = $("#fom").DataTable({
 				}
 			});
 	}
-	
+
 	function saveStatConf(e){
 		var scheduleName = $(e).attr("schedule");
 		var statLevel = $("#statLevel").val();
 		var saveDay = $("#saveDay").val();
 		var statDay = $("#statDay").val();
-		
+
 		$.ajax({
 			url : root + "/fom/schedule/saveStatConf",
 			type : "post",
@@ -668,12 +668,12 @@ table = $("#fom").DataTable({
 				if(data.code != 200){
 					return;
 				}
-				
+
 				var data = data.data;
 				if(data == null){
 					return;
 				}
-				
+
 				refreshHighchartsAll(data);
 				refreshHighchartsDay(data);
 			},
@@ -682,7 +682,7 @@ table = $("#fom").DataTable({
 			}
 		});
 	}
-	
+
 	function refreshHighchartsAll(data){
 		var all = data.all;
 		Highcharts.chart('HighchartsAll', {
@@ -712,7 +712,7 @@ table = $("#fom").DataTable({
 			tooltip : {
 				// head + 每个 point + footer 拼接成完整的 table
 				headerFormat : '<span style="font-size:10px">{point.key}</span><table>',
-				pointFormat : '<tr><td style="color:{series.color};padding:0">{series.name}: </td>' 
+				pointFormat : '<tr><td style="color:{series.color};padding:0">{series.name}: </td>'
 				            + '<td style="padding:0"><b>{point.y}</b></td></tr>',
 				footerFormat : '</table>',
 				shared : true,
@@ -744,7 +744,7 @@ table = $("#fom").DataTable({
 			} ]
 		});
 	}
-	
+
 	function refreshHighchartsDay(data) {
 		var day1 = data.day1;
 		var day2 = data.day2;
@@ -833,6 +833,6 @@ table = $("#fom").DataTable({
 			} ]
 		});
 	}
-	
+
 </script>
 </html>
