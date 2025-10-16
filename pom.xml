@@ -2,14 +2,14 @@
     xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>com.cowave.commons</groupId>
+    <groupId>com.cowave.zoo</groupId>
     <artifactId>schedule-fom</artifactId>
-    <version>2.7.3</version>
+    <version>2.7.6</version>
     <packaging>jar</packaging>
 
     <name>schedule-fom</name>
     <description>schedule task</description>
-    <url>https://github.com/cowave5/schedule-fom.git</url>
+    <url>https://github.com/eozoo/schedule-fom</url>
 
     <licenses>
         <license>
@@ -21,19 +21,19 @@
 
     <issueManagement>
         <system>github</system>
-        <url>https://github.com/cowave5/schedule-fom/issues</url>
+        <url>https://github.com/eozoo/schedule-fom/issues</url>
     </issueManagement>
 
     <scm>
-        <url>https://github.com/cowave5/schedule-fom</url>
-        <connection>scm:git:https://github.com/cowave5/schedule-fom.git</connection>
-        <developerConnection>scm:git:https://github.com/cowave5/schedule-fom.git</developerConnection>
+        <url>https://github.com/eozoo/schedule-fom</url>
+        <connection>scm:git:https://github.com/eozoo/schedule-fom.git</connection>
+        <developerConnection>scm:git:git@github.com:eozoo/schedule-fom.git</developerConnection>
     </scm>
 
     <developers>
         <developer>
             <name>shanhuiming</name>
-            <email>huiming.shan@cowave.com</email>
+            <email>shanhuiming1991@163.com</email>
         </developer>
     </developers>
 
